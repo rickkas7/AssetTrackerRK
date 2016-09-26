@@ -1,0 +1,7 @@
+{
+    "name": "AssetTrackerRK",
+    "version": "0.0.1",
+    "author": "Rick Kaseguma <rickkas7@rickk.com>",
+    "license": "MIT",
+    "description": "Alternate library for AssetTracker using TinyGPS++"
+}
