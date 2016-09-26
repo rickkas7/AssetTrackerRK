@@ -1,7 +1,7 @@
 
 #include "Particle.h"
 
-#include "AssetTrackerRK/AssetTracker.h"
+#include "AssetTrackerRK/AssetTrackerRK.h"
 
 /**
  * Compatible replacement for the official Particle AssetTracker/Electron library.

@@ -1,5 +1,5 @@
-#ifndef __ASSETTRACKER_H
-#define __ASSETTRACKER_H
+#ifndef __ASSETTRACKERRK_H
+#define __ASSETTRACKERRK_H
 
 #include "AssetTrackerRK/LIS3DH.h"
 #include "AssetTrackerRK/TinyGPS++.h"
@@ -49,4 +49,4 @@ private:
 
 };
 
-#endif
+#endif /* __ASSETTRACKERRK_H */
