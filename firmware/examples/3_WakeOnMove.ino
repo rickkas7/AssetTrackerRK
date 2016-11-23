@@ -166,7 +166,14 @@ void loop() {
 
 		// Sleep
 		System.sleep(WKP, RISING, TIME_PUBLISH_BATTERY_SEC, SLEEP_NETWORK_STANDBY);
-
+		
+		//If you want deep sleep mode and no network standby this oddly still seems to
+		//wakeup on move despite not using WKP, RISING variables in System.sleep(). 
+		//This could be useful for long term battery life management. 			
+		//Make sure to put the clearInterrupt code into the setup function 
+		//as the electron resets after deep sleep mode.
+		//System.sleep(SLEEP_MODE_DEEP, TIME_PUBLISH_BATTERY_SEC)	
+			
 		// This delay should not be necessary, but sometimes things don't seem to work right
 		// immediately coming out of sleep.
 		delay(500);
