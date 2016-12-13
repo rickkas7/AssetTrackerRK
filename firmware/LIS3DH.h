@@ -84,7 +84,7 @@ public:
 	 * current orientation. For this to work, the object must be stationary. You typically
 	 * call this method before putting the device to sleep for wake-on-move. The stationnaryTime
 	 * is the amount of time the device needs to be stationary, in milliseconds. Typically, you'd
-	 * wait a few seconds. The maxWaitTime is the amount of time iin milliseconds to wait for
+	 * wait a few seconds. The maxWaitTime is the amount of time in milliseconds to wait for
 	 * the device to stop moving. 0 means wait forever.
 	 */
 	bool calibrateFilter(unsigned long stationaryTime, unsigned long maxWaitTime = 0);

@@ -32,10 +32,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 // Stuff included in Ardiuno but not Particle:
 double radians(double deg) {
-	return (deg * 180.0) / M_PI;
+	return (deg * M_PI) / 180;
 }
 double degrees(double radians) {
-	return (radians * M_PI) / 180;
+	return (radians * 180.0) / M_PI;
 }
 
 double sq(double value) {

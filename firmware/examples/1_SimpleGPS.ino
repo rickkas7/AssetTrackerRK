@@ -55,7 +55,7 @@ void displayInfo()
 
 		char buf[128];
 		if (gps.location.isValid()) {
-			snprintf(buf, sizeof(buf), "%f,%f", gps.location.lat(), gps.location.lng());
+			snprintf(buf, sizeof(buf), "%f,%f,%f", gps.location.lat(), gps.location.lng(), gps.altitude.meters());
 			if (gettingFix) {
 				gettingFix = false;
 				unsigned long elapsed = millis() - startFix;
