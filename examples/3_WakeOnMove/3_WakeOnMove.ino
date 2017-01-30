@@ -1,8 +1,8 @@
 
 #include "Particle.h"
 
-#include "AssetTrackerRK/LIS3DH.h"
-#include "AssetTrackerRK/TinyGPS++.h"
+#include "LIS3DH.h"
+#include "TinyGPS++.h"
 
 
 // Example of Wake On Move with the AssetTracker and the Electron

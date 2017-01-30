@@ -1,6 +1,6 @@
 #include "Particle.h"
 
-#include "AssetTrackerRK/LIS3DH.h"
+#include "LIS3DH.h"
 
 // Electron sample to print accelerometer samples to serial
 // (also works on the Photon, P1, Core)

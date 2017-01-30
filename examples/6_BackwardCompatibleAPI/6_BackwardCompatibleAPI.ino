@@ -9,7 +9,7 @@ reading the battery level, and manually requesting a GPS reading.
 #include "Particle.h"
 
 // Getting the library
-#include "AssetTrackerRK/AssetTrackerRK.h"
+#include "AssetTrackerRK.h"
 
 int transmitMode(String command);
 int gpsPublish(String command);

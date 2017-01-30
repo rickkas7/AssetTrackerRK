@@ -10,6 +10,10 @@ There's also an optional AssetTracker almost-drop-in replacement. I prefer to ac
 Offical project location:
 [https://github.com/rickkas7/AssetTrackerRK] (https://github.com/rickkas7/AssetTrackerRK)
 
+Also note: If you are using this directly from the Particle Firmware Libraries manager it will automatically include the LIS3DH driver as well. If you are manually copying the source from here, you will also need:
+
+[https://github.com/rickkas7/LIS3DH] (https://github.com/rickkas7/LIS3DH)
+
 By the way, I highly recommend adding an external active GPS antenna and the CR1220 coin cell battery. With this combination, the wake-on-move and report GPS location example can get a GPS fix in 2 to 7 seconds!
 
 ## Examples

@@ -1,8 +1,8 @@
 #ifndef __ASSETTRACKERRK_H
 #define __ASSETTRACKERRK_H
 
-#include "AssetTrackerRK/LIS3DH.h"
-#include "AssetTrackerRK/TinyGPS++.h"
+#include "LIS3DH.h"
+#include "TinyGPS++.h"
 
 /**
  * Compatible replacement for the official Particle AssetTracker/Electron library.

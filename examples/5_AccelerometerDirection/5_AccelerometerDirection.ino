@@ -1,6 +1,6 @@
 #include "Particle.h"
 
-#include "AssetTrackerRK/LIS3DH.h"
+#include "LIS3DH.h"
 
 // Example using position detection feature of the LIS3DH and SPI connection, like the AssetTracker
 
