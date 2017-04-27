@@ -38,10 +38,12 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define _GPS_MAX_FIELD_SIZE 15
 
 // Stuff included in Ardiuno but not Particle:
+#ifndef SPARK_WIRING_ARDUINO_CONSTANTS_H
 double radians(double deg);
 double degrees(double radians);
 double sq(double value);
 const double TWO_PI = M_PI * 2;
+#endif
 // End
 
 struct RawDegrees

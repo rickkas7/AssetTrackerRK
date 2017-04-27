@@ -31,6 +31,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define _GPGGAterm   "GPGGA"
 
 // Stuff included in Ardiuno but not Particle:
+#ifndef SPARK_WIRING_ARDUINO_CONSTANTS_H
 double radians(double deg) {
 	return (deg * M_PI) / 180;
 }
@@ -41,6 +42,7 @@ double degrees(double radians) {
 double sq(double value) {
 	return value * value;
 }
+#endif
 // End
 
 TinyGPSPlus::TinyGPSPlus()

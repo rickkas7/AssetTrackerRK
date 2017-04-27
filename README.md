@@ -3,6 +3,10 @@
 
 This is an alternative implementation of the library for the Particle Electron AssetTracker. I used my own [LIS3DH driver] (https://github.com/rickkas7/) and [TinyGPS++] (https://github.com/mikalhart/TinyGPSPlus).
 
+This assumes you have an [AssetTracker v1](https://docs.particle.io/datasheets/particle-shields/#electron-asset-tracker) which has a gold-colored holes for prototyping an a CR1220 battery holder mounted on the top of the board.
+
+The [AssetTracker v2](https://docs.particle.io/datasheets/particle-shields/#electron-asset-tracker-v2) has a smooth silver-colored antenna opposite the Electron. The AssetTrackerRK library does not currently work with the AssetTracker v2.
+
 I prefer the TinyGPS++ library as I find it to be more reliable, and my LIS3DH driver supports some more options including getting accelerometer data, direction sensing, and wake-on-move. 
 
 There's also an optional AssetTracker almost-drop-in replacement. I prefer to access the LIS3DH driver and TinyGPS++ directly, because they have many more features than the original AssetTracker library. But for initial testing, the replacement shim is pretty handy. Note the `preNMEA()` method always return an empty string, because TinyGPS++ doesn't export a function to get that information. 
@@ -44,3 +48,8 @@ The LIS3DH accelerometer has the ability to detect when it's stable in one of 6 
 
 Example of using the original AssetTracker API with the this library.
 
+## Updates
+
+### Updated in 0.1.1
+
+Fixed compatibility with system firmware 0.6.1. The Arduino compatibility in that version conflicted with the Arduino compatibility built into TinyGPS++.
