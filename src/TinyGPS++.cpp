@@ -222,7 +222,7 @@ bool TinyGPSPlus::endOfTermHandler()
   // the first term determines the sentence type
   if (curTermNumber == 0)
   {
-    if (!strcmp(term, _GPRMCterm))
+    if (!strcmp(term, _GPRMCterm) || !strcmp(term, "GNRMC"))
       curSentenceType = GPS_SENTENCE_GPRMC;
     else if (!strcmp(term, _GPGGAterm))
       curSentenceType = GPS_SENTENCE_GPGGA;
