@@ -31,6 +31,8 @@ public:
 	float readLat(void);
 	float readLon(void);
 
+	bool antennaInternal();
+	bool antennaExternal();
 	bool gpsFix(void);
 
 	// This isn't supported, because I wasn't sure how to get it out of TinyGPS++

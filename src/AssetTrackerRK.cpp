@@ -22,6 +22,9 @@ static LIS3DHSPI accel(SPI, A2, WKP);
 static TinyGPSPlus gps;
 char emptyResponse[1] = {0};
 
+static uint8_t internalANT[]={0xB5,0x62,0x06,0x13,0x04,0x00,0x00,0x00,0xF0,0x7D,0x8A,0x2A};
+static uint8_t externalANT[]={0xB5,0x62,0x06,0x13,0x04,0x00,0x01,0x00,0xF0,0x7D,0x8B,0x2E};
+
 AssetTracker::AssetTracker() {
 
 }
@@ -48,6 +51,24 @@ void AssetTracker::gpsOn(void) {
 
 void AssetTracker::gpsOff(void) {
     digitalWrite(GPS_POWER_PIN, HIGH);
+}
+
+bool AssetTracker::antennaInternal() {
+
+	for(size_t ii = 0; ii < sizeof(internalANT); ii++) {
+		Serial1.write(internalANT[ii]);
+	}
+	return true;
+
+}
+
+bool AssetTracker::antennaExternal() {
+
+	for(size_t ii = 0; ii < sizeof(externalANT); ii++) {
+		Serial1.write(externalANT[ii]);
+	}
+	return true;
+
 }
 
 int AssetTracker::readX(void) {
