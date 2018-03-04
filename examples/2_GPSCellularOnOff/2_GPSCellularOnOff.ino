@@ -14,6 +14,7 @@ void buttonHandler(system_event_t event, int data);
 
 const unsigned long PUBLISH_PERIOD = 120000;
 const unsigned long SERIAL_PERIOD = 5000;
+const unsigned long MAX_GPS_AGE_MS = 10000; // GPS location must be newer than this to be considered valid
 
 enum State { IDLE_DISCONNECTED_STATE, CONNECT_WAIT_STATE, IDLE_CONNECTED_STATE, DISCONNECT_WAIT_STATE };
 
@@ -83,7 +84,7 @@ void displayInfo()
 		lastSerial = millis();
 
 		char buf[128];
-		if (gps.location.isValid()) {
+		if (gps.location.isValid() && gps.location.age() < MAX_GPS_AGE_MS) {
 			snprintf(buf, sizeof(buf), "%f,%f", gps.location.lat(), gps.location.lng());
 		}
 		else {

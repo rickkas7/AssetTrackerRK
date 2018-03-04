@@ -44,6 +44,11 @@ The LIS3DH accelerometer has the ability to detect when it's stable in one of 6 
 
 Example of using the original AssetTracker API with the this library.
 
+### 7 Data Dump Tool
+
+This prints the raw data from the accelerometer, which can be useful for debugging.
+
+
 ## Updates
 
 ### Updated in 0.1.1

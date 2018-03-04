@@ -16,6 +16,7 @@ void displayInfo(); // forward declaration
 
 const unsigned long PUBLISH_PERIOD = 120000;
 const unsigned long SERIAL_PERIOD = 5000;
+const unsigned long MAX_GPS_AGE_MS = 10000; // GPS location must be newer than this to be considered valid
 
 // The TinyGPS++ object
 TinyGPSPlus gps;
@@ -54,7 +55,7 @@ void displayInfo()
 		lastSerial = millis();
 
 		char buf[128];
-		if (gps.location.isValid()) {
+		if (gps.location.isValid() && gps.location.age() < MAX_GPS_AGE_MS) {
 			snprintf(buf, sizeof(buf), "%f,%f,%f", gps.location.lat(), gps.location.lng(), gps.altitude.meters());
 			if (gettingFix) {
 				gettingFix = false;

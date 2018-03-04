@@ -103,7 +103,7 @@ float AssetTracker::readLon(void) {
 }
 
 bool AssetTracker::gpsFix(void) {
-	return gps.location.isValid();
+	return gps.location.isValid() && gps.location.age() < MAX_GPS_AGE_MS;
 }
 
 char *AssetTracker::preNMEA(void) {

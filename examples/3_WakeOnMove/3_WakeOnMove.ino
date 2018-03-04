@@ -34,7 +34,7 @@ const unsigned long TIME_AFTER_PUBLISH_MS = 4000; // After publish, wait 4 secon
 const unsigned long TIME_AFTER_BOOT_MS = 5000; // At boot, wait 5 seconds before going to sleep again (after coming online)
 const unsigned long TIME_PUBLISH_BATTERY_SEC = 22 * 60; // every 22 minutes send a battery update to keep the cellular connection up
 const unsigned long SERIAL_PERIOD = 5000;
-
+const unsigned long MAX_GPS_AGE_MS = 10000; // GPS location must be newer than this to be considered valid
 
 const uint8_t movementThreshold = 16;
 
@@ -97,7 +97,7 @@ void loop() {
 		break;
 
 	case GPS_WAIT_STATE:
-		if (gps.location.isValid()) {
+		if (gps.location.isValid() && gps.location.age() < MAX_GPS_AGE_MS) {
 			// Got a GPS fix
 			state = PUBLISH_STATE;
 			break;
@@ -154,12 +154,22 @@ void loop() {
 		break;
 
 	case SLEEP_STATE:
+		// It's a good idea to reset the accelerometer here. It shouldn't be necessary, but 
+		// sometimes if you don't do this, the Electron will never wake up again. This is
+		// oddly correlated with powering down the GPS
+		{
+			LIS3DHConfig config;
+			config.setLowPowerWakeMode(16);
+	
+			accel.setup(config);
+		}	
+	
 		// Wait for Electron to stop moving for 2 seconds so we can recalibrate the accelerometer
 		accel.calibrateFilter(2000);
 
-		// Is this necessary?
-	    //digitalWrite(D6, HIGH);
-	    //pinMode(D6, INPUT);
+		// Uncomment this line to power down the GPS. It saves power but may increase the amount
+		// of time to get a fix.
+	    digitalWrite(D6, HIGH);
 
 	    Serial.println("going to sleep");
 	    delay(500);
@@ -176,7 +186,6 @@ void loop() {
 		Serial.printlnf("awake=%d", awake);
 
 		// Restart the GPS
-	    //pinMode(D6, OUTPUT);
 	    digitalWrite(D6, LOW);
 	    startFix = millis();
 	    gettingFix = true;

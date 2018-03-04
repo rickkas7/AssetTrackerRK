@@ -47,6 +47,8 @@ public:
 	LIS3DHSPI *getLIS3DHSPI();
 	TinyGPSPlus *getTinyGPSPlus();
 
+	static const unsigned long MAX_GPS_AGE_MS = 10000; // GPS location must be newer than this to be considered valid
+
 private:
 
 };
