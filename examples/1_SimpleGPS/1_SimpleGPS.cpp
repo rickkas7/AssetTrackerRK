@@ -3,7 +3,6 @@
 
 // Port of TinyGPS for the Particle AssetTracker
 // https://github.com/mikalhart/TinyGPSPlus
-
 #include "TinyGPS++.h"
 
 SYSTEM_THREAD(ENABLED);

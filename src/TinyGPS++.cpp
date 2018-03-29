@@ -224,7 +224,7 @@ bool TinyGPSPlus::endOfTermHandler()
   {
     if (!strcmp(term, _GPRMCterm) || !strcmp(term, "GNRMC"))
       curSentenceType = GPS_SENTENCE_GPRMC;
-    else if (!strcmp(term, _GPGGAterm))
+    else if (!strcmp(term, _GPGGAterm) ||!strcmp(term, "GNGGA"))
       curSentenceType = GPS_SENTENCE_GPGGA;
     else
       curSentenceType = GPS_SENTENCE_OTHER;
