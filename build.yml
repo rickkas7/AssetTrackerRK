@@ -6,7 +6,7 @@
   electron: [latest]
 - build: examples/4_AccelerometerSamples
   electron: [latest]
-- build: examples/5_AcceleromaterDirection
+- build: examples/5_AccelerometerDirection
   electron: [latest]
 - build: examples/6_BackwardCompatibleAPI
   electron: [0.6.4, 0.7.0, 0.8.0-rc.8]
