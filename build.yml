@@ -1,0 +1,16 @@
+- build: examples/1_SimpleGPS
+  electron: [latest]
+- build: examples/2_GPSCellularOnOff
+  electron: [latest]
+- build: examples/3_WakeOnMove
+  electron: [latest]
+- build: examples/4_AccelerometerSamples
+  electron: [latest]
+- build: examples/5_AcceleromaterDirection
+  electron: [latest]
+- build: examples/6_BackwardCompatibleAPI
+  electron: [0.6.4, 0.7.0, 0.8.0-rc.8]
+- build: examples/7_DataDump
+  electron: [latest]
+
+   
