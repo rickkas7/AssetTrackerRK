@@ -1,6 +1,8 @@
 
 #include "Particle.h"
 
+#include "AssetTrackerRK.h" // only used for AssetTracker::antennaExternal
+
 // Port of TinyGPS for the Particle AssetTracker
 // https://github.com/mikalhart/TinyGPSPlus
 #include "TinyGPS++.h"
@@ -36,6 +38,9 @@ void setup()
     digitalWrite(D6, LOW);
     startFix = millis();
     gettingFix = true;
+
+    // If using an external antenna, uncomment this line:
+    // AssetTracker::antennaExternal();
 }
 
 void loop()
@@ -74,7 +79,7 @@ void displayInfo()
 		if (Particle.connected()) {
 			if (millis() - lastPublish >= PUBLISH_PERIOD) {
 				lastPublish = millis();
-				Particle.publish("gps", buf);
+				Particle.publish("gps", buf, PRIVATE);
 			}
 		}
 	}

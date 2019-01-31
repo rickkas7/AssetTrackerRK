@@ -3,6 +3,7 @@
 
 #include "LIS3DH.h"
 #include "TinyGPS++.h"
+#include "LegacyAdapter.h"
 
 /**
  * Compatible replacement for the official Particle AssetTracker/Electron library.
@@ -12,7 +13,7 @@
  * If I were creating a new project, I'd write directly to the LIS3DH and TinyGPS++
  * interfaces instead of using this wrapper, but it's up to you.
  */
-class AssetTracker {
+class AssetTracker : public LegacyAdapter {
 
 public:
 	AssetTracker();
@@ -28,17 +29,12 @@ public:
 	int readZ(void);
 	int readXYZmagnitude(void);
 
-	float readLat(void);
-	float readLon(void);
-
-	bool antennaInternal();
-	bool antennaExternal();
-	bool gpsFix(void);
+	static bool antennaInternal();
+	static bool antennaExternal();
 
 	// This isn't supported, because I wasn't sure how to get it out of TinyGPS++
 	char *preNMEA(void);
 
-	String readLatLon(void);
 
 	bool setupLowPowerWakeMode(uint8_t movementThreshold = 16);
 	uint8_t clearAccelInterrupt();
@@ -50,7 +46,6 @@ public:
 	static const unsigned long MAX_GPS_AGE_MS = 10000; // GPS location must be newer than this to be considered valid
 
 private:
-
 };
 
 #endif /* __ASSETTRACKERRK_H */
