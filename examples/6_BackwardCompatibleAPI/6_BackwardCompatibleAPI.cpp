@@ -25,7 +25,7 @@ int transmittingData = 1;
 long lastPublish = 0;
 
 // How many minutes between publishes? 10+ recommended for long-time continuous publishing!
-int delayMinutes = 10;
+int delayMinutes = 1;
 
 // Creating an AssetTracker named 't' for us to reference
 AssetTracker t = AssetTracker();
@@ -36,20 +36,23 @@ FuelGauge fuel;
 // setup() and loop() are both required. setup() runs once when the device starts
 // and is used for registering functions and variables and initializing things
 void setup() {
-    // Sets up all the necessary AssetTracker bits
-    t.begin();
-    
-    // Enable the GPS module. Defaults to off to save power. 
-    // Takes 1.5s or so because of delays.
-    t.gpsOn();
-    
     // Opens up a Serial port so you can listen over USB
     Serial.begin(9600);
-    
+
     // These three functions are useful for remote diagnostics. Read more below.
     Particle.function("tmode", transmitMode);
     Particle.function("batt", batteryStatus);
     Particle.function("gps", gpsPublish);
+
+    // Sets up all the necessary AssetTracker bits
+    t.begin();
+    
+    // If using an external antenna, uncomment this line:
+    // t.antennaExternal();
+
+    // Enable the GPS module. Defaults to off to save power. 
+    // Takes 1.5s or so because of delays.
+    t.gpsOn();
 }
 
 // loop() runs continuously
@@ -67,7 +70,7 @@ void loop() {
         //Particle.publish("A", pubAccel, 60, PRIVATE);
         
         // Dumps the full NMEA sentence to serial in case you're curious
-        Serial.println(t.preNMEA());
+        // Serial.println(t.preNMEA());
         
         // GPS requires a "fix" on the satellites to give good data,
         // so we should only publish data if there's a fix
@@ -79,6 +82,9 @@ void loop() {
             }
             // but always report the data over serial for local development
             Serial.println(t.readLatLon());
+        }
+        else {
+        	Serial.println("no fix");
         }
     }
 }

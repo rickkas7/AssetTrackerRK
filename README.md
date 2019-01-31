@@ -46,7 +46,7 @@ Example of using the original AssetTracker API with the this library.
 
 ### 7 Data Dump Tool
 
-This prints the raw data from the accelerometer, which can be useful for debugging.
+This prints the raw data from the GPS, which can be useful for debugging.
 
 
 ## Updates
@@ -59,3 +59,14 @@ Fixed compatibility with system firmware 0.6.1. The Arduino compatibility in tha
 
 Added compatibility with AssetTracker v2. This is just basic compatibility with getting GPS data; more advanced 
 options for controlling it will be added later.
+
+### Updated in 0.2.0
+
+- Implement all official AssetTracker methods
+- Upgrade to LIS3DH 0.2.3
+- Refactoring
+- Parser Unit Tests
+
+
+
+

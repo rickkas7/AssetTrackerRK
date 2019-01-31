@@ -25,7 +25,7 @@ char emptyResponse[1] = {0};
 static uint8_t internalANT[]={0xB5,0x62,0x06,0x13,0x04,0x00,0x00,0x00,0xF0,0x7D,0x8A,0x2A};
 static uint8_t externalANT[]={0xB5,0x62,0x06,0x13,0x04,0x00,0x01,0x00,0xF0,0x7D,0x8B,0x2E};
 
-AssetTracker::AssetTracker() {
+AssetTracker::AssetTracker() : LegacyAdapter(gps) {
 
 }
 
@@ -53,6 +53,7 @@ void AssetTracker::gpsOff(void) {
     digitalWrite(GPS_POWER_PIN, HIGH);
 }
 
+// [static]
 bool AssetTracker::antennaInternal() {
 
 	for(size_t ii = 0; ii < sizeof(internalANT); ii++) {
@@ -62,6 +63,7 @@ bool AssetTracker::antennaInternal() {
 
 }
 
+// [static]
 bool AssetTracker::antennaExternal() {
 
 	for(size_t ii = 0; ii < sizeof(externalANT); ii++) {
@@ -95,26 +97,8 @@ int AssetTracker::readXYZmagnitude(void) {
     return magnitude;
 }
 
-float AssetTracker::readLat(void) {
-	return (float) gps.location.lat();
-}
-float AssetTracker::readLon(void) {
-	return (float) gps.location.lng();
-}
-
-bool AssetTracker::gpsFix(void) {
-	return gps.location.isValid() && gps.location.age() < MAX_GPS_AGE_MS;
-}
-
 char *AssetTracker::preNMEA(void) {
 	return emptyResponse;
-}
-
-
-String AssetTracker::readLatLon(void) {
-    String latLon = String::format("%f,%f",gps.location.lat(), gps.location.lng());
-    return latLon;
-
 }
 
 bool AssetTracker::setupLowPowerWakeMode(uint8_t movementThreshold) {

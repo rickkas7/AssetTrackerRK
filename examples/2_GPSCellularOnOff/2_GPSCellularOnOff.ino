@@ -95,7 +95,7 @@ void displayInfo()
 		if (Particle.connected()) {
 			if (millis() - lastPublish >= PUBLISH_PERIOD) {
 				lastPublish = millis();
-				Particle.publish("gps", buf);
+				Particle.publish("gps", buf, PRIVATE);
 			}
 		}
 	}
