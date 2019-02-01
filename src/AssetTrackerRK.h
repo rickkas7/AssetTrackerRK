@@ -1,51 +1,168 @@
 #ifndef __ASSETTRACKERRK_H
 #define __ASSETTRACKERRK_H
 
+#include "Particle.h"
+
 #include "LIS3DH.h"
 #include "TinyGPS++.h"
 #include "LegacyAdapter.h"
 
 /**
- * Compatible replacement for the official Particle AssetTracker/Electron library.
+ * @brief Compatible replacement for the official Particle AssetTracker/Electron library.
  *
  * This is an almost drop-in replacement based on my LIS3DH driver and TinyGPS++.
  *
  * If I were creating a new project, I'd write directly to the LIS3DH and TinyGPS++
  * interfaces instead of using this wrapper, but it's up to you.
+ *
+ * Note that many of the backward compatibility methods are in the LegacyAdapter class
+ * so make sure you check there as well.
  */
 class AssetTracker : public LegacyAdapter {
 
 public:
+	/**
+	 * @brief Construct an AssetTracker object. Normally this is a global variable.
+	 */
 	AssetTracker();
 
+	/**
+	 * @brief Initialize the LIS3DH accelerometer. Optional.
+	 */
 	void begin(void);
+
+	/**
+	 * @brief Updates the GPS. Must be called from loop() as often as possible, typically every loop.
+	 *
+	 * Only call this when not using threaded mode.
+	 */
 	void updateGPS(void);
+
+	/**
+	 * @brief Enable GPS threaded mode
+	 *
+	 * In threaded mode, the serial port is read from a separate thread so you'll be less likely to
+	 * lose data if loop() is blocked for any reason
+	 */
+	void startThreadedMode();
+
+	/**
+	 * @brief Turns the GPS on.
+	 *
+	 * By default, it's off on reset. Call gpsOn() to turn it on.
+	 */
 	void gpsOn(void);
+
+	/**
+	 * @brief Turns the GPS off.
+	 */
 	void gpsOff(void);
 
-
+	/**
+	 * @brief Read the accelerometer X value (signed)
+	 */
 	int readX(void);
+
+	/**
+	 * @brief Read the accelerometer Y value (signed)
+	 */
 	int readY(void);
+
+	/**
+	 * @brief Read the accelerometer Z value (signed)
+	 */
 	int readZ(void);
+
+	/**
+	 * @brief Read the magnitude of the acceleration vector (positive value)
+	 *
+	 * sqrt((sample.x*sample.x)+(sample.y*sample.y)+(sample.z*sample.z));
+	 */
 	int readXYZmagnitude(void);
 
+	/**
+	 * @brief Select the internal antenna
+	 *
+	 * On the AssetTracker v2 only (or other u-blox GPS), sets the antenna to internal. Internal is the default
+	 * and is reset every time the GPS is powered up.
+	 *
+	 * On the AssetTracker v1 (or other PA6H GPS), the antenna is auto-switching and this call is ignored.
+	 */
 	static bool antennaInternal();
+
+
+	/**
+	 * @brief Select the external antenna
+	 *
+	 * On the AssetTracker v2 only (or other u-blox GPS), sets the antenna to external. Internal is the default
+	 * and is reset every time the GPS is powered up.
+	 *
+	 * On the AssetTracker v1 (or other PA6H GPS), the antenna is auto-switching and this call is ignored.
+	 */
 	static bool antennaExternal();
 
-	// This isn't supported, because I wasn't sure how to get it out of TinyGPS++
+	/**
+	 * @brief Not supported. The data is not available from TinyGPS++
+	 *
+	 * An empty string is always returned.
+	 */
 	char *preNMEA(void);
 
-
+	/**
+	 * @brief Calls the LIS3DH setupLowPowerWakeMode
+	 *
+	 * You should call this instead of begin().
+	 */
 	bool setupLowPowerWakeMode(uint8_t movementThreshold = 16);
+
+	/**
+	 * @brief Clears the accelerometer interrupt if latching interrupts are enabled
+	 */
 	uint8_t clearAccelInterrupt();
+
+	/**
+	 * @brief Calibrate the filter used to cancel out gravity
+	 *
+	 * @param stationaryTime Amount of time (in milliseconds) the device needs to be stationary
+	 *
+	 * @param maxWaitTime Amount of time to wait (in milliseconds). 0 = wait forever
+	 *
+	 * @return true if the filter is calibrated or false if still moving and the wait time was
+	 * exceeded
+	 *
+	 * In order to cancel out the effects of gravity on the accelerometer, we need to wait until
+	 * it's not moving. Then we assume the steady state gravity is the baseline. This is necessary
+	 * to support having the GPS positioned in any direction other than completely flat
+	 * (all gravity in the Z direction).
+	 *
+	 */
 	bool calibrateFilter(unsigned long stationaryTime, unsigned long maxWaitTime = 0);
 
+
+	/**
+	 * @brief Override the default serial port used to connect to the GPS. Default is Serial1.
+	 */
+	inline AssetTracker &withSerialPort(USARTSerial &port) { serialPort = port; return *this; };
+
+	/**
+	 * @brief Gets the LIS3DH accelerometer object so you can access its methods directly
+	 */
 	LIS3DHSPI *getLIS3DHSPI();
+
+	/**
+	 * @brief Gets the TinyGPS++ object so you can access its methods directly
+	 */
 	TinyGPSPlus *getTinyGPSPlus();
 
-	static const unsigned long MAX_GPS_AGE_MS = 10000; // GPS location must be newer than this to be considered valid
+	// This is defined in Legacy Adapter - probably should delete this
+	// static const unsigned long MAX_GPS_AGE_MS = 10000; // GPS location must be newer than this to be considered valid
 
 private:
+	void threadFunction();
+	static void threadFunctionStatic(void *param);
+
+	USARTSerial &serialPort = Serial1;
+	Thread *thread = NULL;
 };
 
 #endif /* __ASSETTRACKERRK_H */

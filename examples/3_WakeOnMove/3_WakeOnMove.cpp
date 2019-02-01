@@ -3,7 +3,7 @@
 
 #include "LIS3DH.h"
 #include "TinyGPS++.h"
-
+#include "AssetTrackerRK.h" // Only for AssetTracker::antennaExternal
 
 // Example of Wake On Move with the AssetTracker and the Electron
 //
@@ -39,7 +39,7 @@ const unsigned long MAX_GPS_AGE_MS = 10000; // GPS location must be newer than t
 const uint8_t movementThreshold = 16;
 
 // Stuff for the finite state machine
-enum State { ONLINE_WAIT_STATE, RESET_STATE, RESET_WAIT_STATE, PUBLISH_STATE, SLEEP_STATE, SLEEP_WAIT_STATE, BOOT_WAIT_STATE, GPS_WAIT_STATE };
+enum State { ONLINE_WAIT_STATE, RESET_STATE, RESET_WAIT_STATE, PUBLISH_STATE, SLEEP_STATE, SLEEP_WAIT_STATE, CALIBRATE_STATE, BOOT_WAIT_STATE, GPS_WAIT_STATE };
 State state = ONLINE_WAIT_STATE;
 unsigned long stateTime = 0;
 int awake = 0;
@@ -59,6 +59,9 @@ void setup() {
     digitalWrite(D6, LOW);
     startFix = millis();
     gettingFix = true;
+
+    // To use an external antenna, uncomment this line:
+    AssetTracker::antennaExternal();
 }
 
 
@@ -163,35 +166,53 @@ void loop() {
 	
 			accel.setup(config);
 		}	
-	
-		// Wait for Electron to stop moving for 2 seconds so we can recalibrate the accelerometer
-		accel.calibrateFilter(2000);
-
-		// Uncomment this line to power down the GPS. It saves power but may increase the amount
-		// of time to get a fix.
-	    digitalWrite(D6, HIGH);
-
-	    Serial.println("going to sleep");
-	    delay(500);
-
-		// Sleep
-		System.sleep(WKP, RISING, TIME_PUBLISH_BATTERY_SEC, SLEEP_NETWORK_STANDBY);
-
-		// This delay should not be necessary, but sometimes things don't seem to work right
-		// immediately coming out of sleep.
-		delay(500);
-
-		awake = ((accel.clearInterrupt() & LIS3DH::INT1_SRC_IA) != 0);
-
-		Serial.printlnf("awake=%d", awake);
-
-		// Restart the GPS
-	    digitalWrite(D6, LOW);
-	    startFix = millis();
-	    gettingFix = true;
-
-		state = GPS_WAIT_STATE;
+		state = CALIBRATE_STATE;
 		stateTime = millis();
+		break;
+
+	case CALIBRATE_STATE:
+		// Wait for Electron to stop moving for 2 seconds so we can recalibrate the accelerometer
+		// Wait for 5 seconds before looping again
+		if (accel.calibrateFilter(2000, 5000)) {
+			// We've stopped moving and the accelerometer is calibrated
+
+			// Uncomment this line to power down the GPS. It saves power but will increase the amount
+			// of time to get a fix.
+			// digitalWrite(D6, HIGH);
+
+			Serial.println("going to sleep");
+			delay(500);
+
+			// If you use SLEEP_MODE_DEEP it's very important to make sure WKP is LOW before going to
+			// sleep. If you go into SLEEP_MODE_DEEP with WKP high you will likely never wake up again
+			// (until reset).
+			if (digitalRead(WKP)) {
+				// Try to calibrate again
+				break;
+			}
+
+			// Sleep
+			System.sleep(WKP, RISING, TIME_PUBLISH_BATTERY_SEC, SLEEP_NETWORK_STANDBY);
+
+			// This delay should not be necessary, but sometimes things don't seem to work right
+			// immediately coming out of sleep.
+			delay(500);
+
+			awake = ((accel.clearInterrupt() & LIS3DH::INT1_SRC_IA) != 0);
+
+			Serial.printlnf("awake=%d", awake);
+
+			// Restart the GPS
+			digitalWrite(D6, LOW);
+			startFix = millis();
+			gettingFix = true;
+
+			state = GPS_WAIT_STATE;
+			stateTime = millis();
+		}
+		else {
+			Serial.printlnf("still moving after %u sec", (millis() - stateTime) / 1000);
+		}
 		break;
 
 	}

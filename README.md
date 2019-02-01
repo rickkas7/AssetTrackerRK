@@ -1,20 +1,27 @@
 # AssetTrackerRK
 *Alternative library for the Particle AssetTracker/Electron based on TinyGPS++*
 
-This is an alternative implementation of the library for the Particle Electron AssetTracker. I used my own [LIS3DH driver] (https://github.com/rickkas7/) and [TinyGPS++] (https://github.com/mikalhart/TinyGPSPlus).
+This is an alternative implementation of the library for the Particle Electron AssetTracker. I used my own [LIS3DH driver](https://github.com/rickkas7/) and [TinyGPS++](https://github.com/mikalhart/TinyGPSPlus).
 
 I prefer the TinyGPS++ library as I find it to be more reliable, and my LIS3DH driver supports some more options including getting accelerometer data, direction sensing, and wake-on-move. 
 
 There's also an optional AssetTracker almost-drop-in replacement. I prefer to access the LIS3DH driver and TinyGPS++ directly, because they have many more features than the original AssetTracker library. But for initial testing, the replacement shim is pretty handy. Note the `preNMEA()` method always return an empty string, because TinyGPS++ doesn't export a function to get that information. 
 
-Offical project location:
-[https://github.com/rickkas7/AssetTrackerRK] (https://github.com/rickkas7/AssetTrackerRK)
+There is also support for threaded mode. In threaded mode, the GPS serial port is read from a separate thread. This eliminates the need to do it from loop, and dramatically reduces the chance of lost or corrupted GPS data caused by blocking the loop long enough to overflow the 64-byte serial buffer.
+
+Official project location:
+[https://github.com/rickkas7/AssetTrackerRK](https://github.com/rickkas7/AssetTrackerRK)
+
+You can browse the full API documentation here:
+[https://rickkas7.github.io/AssetTrackerRK](https://rickkas7.github.io/AssetTrackerRK).
 
 Also note: If you are using this directly from the Particle Firmware Libraries manager it will automatically include the LIS3DH driver as well. If you are manually copying the source from here, you will also need:
 
-[https://github.com/rickkas7/LIS3DH] (https://github.com/rickkas7/LIS3DH)
+[https://github.com/rickkas7/LIS3DH](https://github.com/rickkas7/LIS3DH)
 
-By the way, I highly recommend adding an external active GPS antenna and the CR1220 coin cell battery. With this combination, the wake-on-move and report GPS location example can get a GPS fix in 2 to 7 seconds!
+By the way, I highly recommend adding an external active GPS antenna and the CR1220 coin cell battery with the AssetTracker V1. With this combination, the wake-on-move and report GPS location example can get a GPS fix in 2 to 7 seconds! 
+
+The AssetTracker V2 includes a supercapacitor that eliminates the need for the coin cell as long as you normally have power available to the GPS.
 
 ## Examples
 
@@ -67,6 +74,10 @@ options for controlling it will be added later.
 - Refactoring
 - Parser Unit Tests
 
+### Updated in 0.2.1
+
+- Additional documentation
+- Support for threaded mode
 
 
 

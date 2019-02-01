@@ -8,8 +8,9 @@
  *
  * This is an almost drop-in replacement based on my LIS3DH driver and TinyGPS++.
  *
- * If I were creating a new project, I'd write directly to the LIS3DH and TinyGPS++
- * interfaces instead of using this wrapper, but it's up to you.
+ * If I were creating a new project, I might write directly to the LIS3DH and TinyGPS++
+ * interfaces instead of using this wrapper, but it's up to you. Though the new APIs
+ * available from the LegacyAdapter class are quite handy.
  *
  * Official Project Location:
  * https://github.com/rickkas7/AssetTrackerRK
@@ -37,10 +38,27 @@ void AssetTracker::begin(void) {
 }
 
 void AssetTracker::updateGPS(void) {
-	while (Serial1.available() > 0) {
-		if (gps.encode(Serial1.read())) {
-		}
+	while (serialPort.available() > 0) {
+		gps.encode(serialPort.read());
 	}
+}
+
+void AssetTracker::startThreadedMode() {
+	if (thread == NULL) {
+		thread = new Thread("AssetTracker", threadFunctionStatic, this, OS_THREAD_PRIORITY_DEFAULT, 1024);
+	}
+}
+
+void AssetTracker::threadFunction() {
+	while(true) {
+		updateGPS();
+		os_thread_yield();
+	}
+}
+
+// [static]
+void AssetTracker::threadFunctionStatic(void *param) {
+	static_cast<AssetTracker *>(param)->threadFunction();
 }
 
 void AssetTracker::gpsOn(void) {
