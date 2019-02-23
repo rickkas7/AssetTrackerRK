@@ -3,6 +3,8 @@
 
 SYSTEM_THREAD(ENABLED);
 
+SerialLogHandler logHandler;
+
 void displayInfo(); // forward declaration
 
 const unsigned long PUBLISH_PERIOD = 120000;
@@ -18,8 +20,8 @@ void setup()
 {
 	Serial.begin();
 
-	// Turn on GPS module
-	t.gpsOn();
+	// Enable I2C mode
+	t.withI2C();
 
 	// Run in threaded mode - this eliminates the need to read Serial1 from loop or updateGPS() and dramatically
 	// lowers the risk of lost or corrupted GPS data caused by blocking loop for too long and overflowing the
@@ -28,16 +30,10 @@ void setup()
 
     startFix = millis();
     gettingFix = true;
-
-    // If using an external antenna, uncomment this line:
-    // t.antennaExternal();
 }
 
 void loop()
 {
-	// In threaded mode, you must not call updateGPS() from loop - it's handled automatically
-	// from a separate thread if you call t.startThreadedMode()
-
 	displayInfo();
 }
 
@@ -52,7 +48,7 @@ void displayInfo()
 			if (gettingFix) {
 				gettingFix = false;
 				unsigned long elapsed = millis() - startFix;
-				Serial.printlnf("%lu milliseconds to get GPS fix", elapsed);
+				Log.info("%lu milliseconds to get GPS fix", elapsed);
 			}
 		}
 		else {
@@ -62,7 +58,7 @@ void displayInfo()
 				startFix = millis();
 			}
 		}
-		Serial.println(buf);
+		Log.info(buf);
 
 		if (Particle.connected()) {
 			if (millis() - lastPublish >= PUBLISH_PERIOD) {

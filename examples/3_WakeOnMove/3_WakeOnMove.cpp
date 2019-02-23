@@ -61,7 +61,7 @@ void setup() {
     gettingFix = true;
 
     // To use an external antenna, uncomment this line:
-    AssetTracker::antennaExternal();
+    // { AssetTracker t; t.antennaExternal(); }
 }
 
 

@@ -39,8 +39,8 @@ void setup()
     startFix = millis();
     gettingFix = true;
 
-    // If using an external antenna, uncomment this line:
-    // AssetTracker::antennaExternal();
+    // If using an external antenna, uncomment this block
+    // { AssetTracker t; t.antennaExternal(); }
 }
 
 void loop()

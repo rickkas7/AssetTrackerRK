@@ -30,6 +30,10 @@ AssetTracker::AssetTracker() : LegacyAdapter(gps) {
 
 }
 
+AssetTracker::~AssetTracker() {
+
+}
+
 void AssetTracker::begin(void) {
 	LIS3DHConfig config;
 	config.setAccelMode(LIS3DH::RATE_100_HZ);
@@ -38,8 +42,27 @@ void AssetTracker::begin(void) {
 }
 
 void AssetTracker::updateGPS(void) {
-	while (serialPort.available() > 0) {
-		gps.encode(serialPort.read());
+	if (!useWire) {
+		while (serialPort.available() > 0) {
+			gps.encode(serialPort.read());
+		}
+	}
+	else {
+		uint8_t buf[32];
+
+		WITH_LOCK(wire) {
+			uint16_t available = wireReadBytesAvailable();
+			if (available > 32) {
+				available = 32;
+			}
+			if (available > 0) {
+				if (wireReadBytes(buf, available) == available) {
+					for(uint16_t ii = 0; ii < available; ii++) {
+						gps.encode(buf[ii]);
+					}
+				}
+			}
+		}
 	}
 }
 
@@ -71,24 +94,42 @@ void AssetTracker::gpsOff(void) {
     digitalWrite(GPS_POWER_PIN, HIGH);
 }
 
-// [static]
-bool AssetTracker::antennaInternal() {
-
-	for(size_t ii = 0; ii < sizeof(internalANT); ii++) {
-		Serial1.write(internalANT[ii]);
+void AssetTracker::sendCommand(const uint8_t *cmd, size_t len) {
+	if (!useWire) {
+		serialPort.write(cmd, len);
 	}
-	return true;
+	else {
+		WITH_LOCK(wire) {
+			size_t offset = 0;
 
+			while(offset < len) {
+				uint8_t res;
+
+				size_t reqLen = (len - offset);
+				if (reqLen > 32) {
+					reqLen = 32;
+				}
+
+				wire.beginTransmission(wireAddr);
+
+				wire.write(&cmd[offset], reqLen);
+
+				offset += reqLen;
+
+				res = wire.endTransmission((offset >= len));
+			}
+		}
+	}
 }
 
-// [static]
-bool AssetTracker::antennaExternal() {
-
-	for(size_t ii = 0; ii < sizeof(externalANT); ii++) {
-		Serial1.write(externalANT[ii]);
-	}
+bool AssetTracker::antennaInternal() {
+	sendCommand(internalANT, sizeof(internalANT));
 	return true;
+}
 
+bool AssetTracker::antennaExternal() {
+	sendCommand(externalANT, sizeof(externalANT));
+	return true;
 }
 
 int AssetTracker::readX(void) {
@@ -133,6 +174,80 @@ uint8_t AssetTracker::clearAccelInterrupt() {
 bool AssetTracker::calibrateFilter(unsigned long stationaryTime, unsigned long maxWaitTime) {
 	return accel.calibrateFilter(stationaryTime, maxWaitTime);
 }
+
+AssetTracker &AssetTracker::withSerialPort(USARTSerial &port) {
+	useWire = false;
+	serialPort = port;
+	return *this;
+}
+
+AssetTracker &AssetTracker::withI2C(TwoWire &wire, uint8_t addr) {
+	useWire = true;
+	this->wire = wire;
+	this->wireAddr = addr;
+
+	wire.begin();
+
+	return *this;
+}
+
+uint16_t AssetTracker::wireReadBytesAvailable() {
+	uint8_t res;
+
+	wire.beginTransmission(wireAddr);
+	wire.write(0xfd);
+	res = wire.endTransmission(false);
+	if (res != 0) {
+		Log.info("wireReadBytesAvailable I2C error %u", res);
+		return 0;
+	}
+
+	res = wire.requestFrom(wireAddr, (uint8_t) 2, (uint8_t) true);
+	if (res != 2) {
+		Log.info("wireReadBytesAvailable incorrect count %u", res);
+		return 0;
+	}
+
+	uint16_t available = wire.read() << 8;
+	available |= wire.read();
+
+	return available;
+}
+
+int AssetTracker::wireReadBytes(uint8_t *buf, size_t len) {
+	uint8_t res;
+
+	// Log.info("wireReadBytes len=%u", len);
+
+	wire.beginTransmission(wireAddr);
+	wire.write(0xff);
+	res = wire.endTransmission(false);
+	if (res != 0) {
+		Log.info("wireReadBytes I2C error %u", res);
+		return -1;
+	}
+
+	size_t offset = 0;
+
+	while(offset < len) {
+		size_t reqLen = (len - offset);
+		if (reqLen > 32) {
+			reqLen = 32;
+		}
+		res = wire.requestFrom(wireAddr, (uint8_t) reqLen, (uint8_t) ((offset + reqLen) == len));
+		if (res != reqLen) {
+			Log.info("wireReadBytes incorrect count %u", res);
+			return -1;
+		}
+
+		for(size_t ii = 0; ii < reqLen; ii++) {
+			buf[offset + ii] = wire.read();
+		}
+		offset += reqLen;
+ 	}
+	return len;
+}
+
 
 LIS3DHSPI *AssetTracker::getLIS3DHSPI() {
 	return &accel;

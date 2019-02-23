@@ -27,6 +27,11 @@ public:
 	AssetTracker();
 
 	/**
+	 * @brief Destructor
+	 */
+	virtual ~AssetTracker();
+
+	/**
 	 * @brief Initialize the LIS3DH accelerometer. Optional.
 	 */
 	void begin(void);
@@ -80,6 +85,17 @@ public:
 	 */
 	int readXYZmagnitude(void);
 
+
+	/**
+	 * @brief Sends a u-blox GPS command.
+	 *
+	 * @param cmd The pointer to a uint8_t array of bytes to send
+	 *
+	 * @param len The length of the command.
+	 */
+	void sendCommand(const uint8_t *cmd, size_t len);
+
+
 	/**
 	 * @brief Select the internal antenna
 	 *
@@ -88,7 +104,7 @@ public:
 	 *
 	 * On the AssetTracker v1 (or other PA6H GPS), the antenna is auto-switching and this call is ignored.
 	 */
-	static bool antennaInternal();
+	bool antennaInternal();
 
 
 	/**
@@ -99,7 +115,7 @@ public:
 	 *
 	 * On the AssetTracker v1 (or other PA6H GPS), the antenna is auto-switching and this call is ignored.
 	 */
-	static bool antennaExternal();
+	bool antennaExternal();
 
 	/**
 	 * @brief Not supported. The data is not available from TinyGPS++
@@ -142,7 +158,18 @@ public:
 	/**
 	 * @brief Override the default serial port used to connect to the GPS. Default is Serial1.
 	 */
-	inline AssetTracker &withSerialPort(USARTSerial &port) { serialPort = port; return *this; };
+	AssetTracker &withSerialPort(USARTSerial &port);
+
+	/**
+	 * @brief Use I2C (DDC) instead of serial.
+	 *
+	 * @param wire The I2C interface to use. This is optional, and if not set, Wire (the standard I2C interface) is used.
+	 * On some devices (Electron, Argon, and Xenon), there is an optional Wire1.
+	 *
+	 * @param addr The I2C address to use. This is optional, and the default is 0x42.
+	 * The address can be reprogrammed in softare on the u-blox GPS, but 0x42 is the default.
+	 */
+	AssetTracker &withI2C(TwoWire &wire = Wire, uint8_t addr = 0x42);
 
 	/**
 	 * @brief Gets the LIS3DH accelerometer object so you can access its methods directly
@@ -158,9 +185,15 @@ public:
 	// static const unsigned long MAX_GPS_AGE_MS = 10000; // GPS location must be newer than this to be considered valid
 
 private:
+	uint16_t wireReadBytesAvailable();
+	int wireReadBytes(uint8_t *buf, size_t len);
+
 	void threadFunction();
 	static void threadFunctionStatic(void *param);
 
+	bool useWire = false;
+	TwoWire &wire = Wire;
+	uint8_t wireAddr = 0x42;
 	USARTSerial &serialPort = Serial1;
 	Thread *thread = NULL;
 };
