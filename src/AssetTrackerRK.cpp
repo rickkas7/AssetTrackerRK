@@ -26,6 +26,15 @@ char emptyResponse[1] = {0};
 static uint8_t internalANT[]={0xB5,0x62,0x06,0x13,0x04,0x00,0x00,0x00,0xF0,0x7D,0x8A,0x2A};
 static uint8_t externalANT[]={0xB5,0x62,0x06,0x13,0x04,0x00,0x01,0x00,0xF0,0x7D,0x8B,0x2E};
 
+// For thread safety, we do a WITH_LOCK on Wire (or Wire1) before accessing I2C. However,
+// this only exists in 0.8.0 and later. It's not possible to completely safe in threaded
+// mode on older Device OS.
+#if SYSTEM_VERSION >= 0x00080000
+#define LOCK_WIRE WITH_LOCK(wire)
+#else
+#define LOCK_WIRE
+#endif
+
 AssetTracker::AssetTracker() : LegacyAdapter(gps) {
 
 }
@@ -50,7 +59,8 @@ void AssetTracker::updateGPS(void) {
 	else {
 		uint8_t buf[32];
 
-		WITH_LOCK(wire) {
+		// LOCK_WIRE is WITH_LOCK(wire) on 0.8.0 and later
+		LOCK_WIRE {
 			uint16_t available = wireReadBytesAvailable();
 			if (available > 32) {
 				available = 32;
@@ -99,7 +109,8 @@ void AssetTracker::sendCommand(const uint8_t *cmd, size_t len) {
 		serialPort.write(cmd, len);
 	}
 	else {
-		WITH_LOCK(wire) {
+		// LOCK_WIRE is WITH_LOCK(wire) on 0.8.0 and later
+		LOCK_WIRE {
 			size_t offset = 0;
 
 			while(offset < len) {
