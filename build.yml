@@ -9,12 +9,16 @@
 - build: examples/5_AccelerometerDirection
   electron: [latest]
 - build: examples/6_BackwardCompatibleAPI
-  electron: [0.6.4, 0.7.0, 0.8.0-rc.12,0.9.0, 1.0.0]
+  photon: [1.0.0]
+  electron: [0.6.4, 0.7.0, 0.8.0-rc.12, 1.0.0]
+  argon: [0.9.0]
+  boron: [0.9.0]
+  xenon: [0.9.0]
 - build: examples/7_DataDump
   electron: [latest]
 - build: examples/8_ThreadedMode
   electron: [1.0.0]
-  boron: [0.8.0-rc.27]
+  boron: [0.9.0]
 - build: examples/9_I2C
   electron: [1.0.0]
   boron: [0.8.0-rc.27,0.9.0]
