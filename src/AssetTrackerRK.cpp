@@ -95,7 +95,9 @@ void AssetTracker::threadFunctionStatic(void *param) {
 }
 
 void AssetTracker::gpsOn(void) {
-	Serial1.begin(GPS_BAUD);
+	if (!useWire) {
+		serialPort.begin(GPS_BAUD);
+	}
     pinMode(GPS_POWER_PIN, OUTPUT);
     digitalWrite(GPS_POWER_PIN, LOW);
 }

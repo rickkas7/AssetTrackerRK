@@ -167,7 +167,7 @@ public:
 	 * On some devices (Electron, Argon, and Xenon), there is an optional Wire1.
 	 *
 	 * @param addr The I2C address to use. This is optional, and the default is 0x42.
-	 * The address can be reprogrammed in softare on the u-blox GPS, but 0x42 is the default.
+	 * The address can be reprogrammed in software on the u-blox GPS, but 0x42 is the default.
 	 */
 	AssetTracker &withI2C(TwoWire &wire = Wire, uint8_t addr = 0x42);
 
