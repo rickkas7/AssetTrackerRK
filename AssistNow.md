@@ -149,7 +149,7 @@ The instructions [can be found here](https://developers.google.com/maps/document
 
 Be sure to put your actual Google API key in place of `PASTE_YOUR_GOOGLE_API_KEY_HERE`.
 
-![Assist Elevation Webhook(images/assist-elevation.png)
+![Assist Elevation Webhook](images/assist-elevation.png)
 
 ## Using in your code
 
