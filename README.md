@@ -1,4 +1,5 @@
 # AssetTrackerRK
+
 *Alternative library for the Particle AssetTracker/Electron based on TinyGPS++*
 
 This is an alternative implementation of the library for the Particle Electron AssetTracker. I used my own [LIS3DH driver](https://github.com/rickkas7/) and [TinyGPS++](https://github.com/mikalhart/TinyGPSPlus).
@@ -67,6 +68,17 @@ code in your loop() function. This is recommended instead of the simple method u
 Version 0.2.2 and later of the library supports a u-blox GPS (tested with a MAX-M8-Q) using I2C instead of serial. This is
 particularly helpful on Gen 3 devices like the Boron, which does not have as many serial ports as the Electron.
 
+### 10 Pass-Through
+
+The Pass-Through firmware is used primarily so you can use the u-blox [u-center](https://www.u-blox.com/en/product/u-center) app with the AssetTracker V2. This Windows-based software allows you to decode the data from the GPS and issue commands using a graphical user interface. 
+
+Flash the pass-through software to your AssetTracker V2. It will boot into manual mode (breathing white). Run the u-center application and select the USB port for the Electron. 
+
+In order to remove the pass-through software you'll probably need to use DFU mode (blinking yellow) or safe mode (breathing magenta) since the cloud is deactivated by this example.
+
+### 11 AssistNow
+
+This example uses the u-blox AssistNow service to download almanac and ephemeris data over cellular and upload it to the modem, instead of waiting for it to arrive by satellite. This can greatly speed time to first fix on compatible GPS models. See [AssistNow](https://github.com/rickkas7/AssetTrackerRK/blob/master/AssistNow.md) for more information.
 
 ## Updates
 
@@ -94,5 +106,12 @@ options for controlling it will be added later.
 ### Updated in 0.2.2
 
 - Support for u-blox GPS connected by I2C instead of serial
+
+### Updated in 0.3.1
+
+- Minimum supported Device OS version is now 0.9.0. Tested mostly with 1.4.4.
+- Added u-blox [AssistNow](https://github.com/rickkas7/AssetTrackerRK/blob/master/AssistNow.md) support (beta)
+- Added u-center pass-through example
+
 
 

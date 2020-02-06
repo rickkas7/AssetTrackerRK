@@ -3,6 +3,7 @@
 
 #include "AssetTrackerRK.h"
 
+
 /**
  * Compatible replacement for the official Particle AssetTracker/Electron library.
  *
@@ -26,17 +27,11 @@ char emptyResponse[1] = {0};
 static uint8_t internalANT[]={0xB5,0x62,0x06,0x13,0x04,0x00,0x00,0x00,0xF0,0x7D,0x8A,0x2A};
 static uint8_t externalANT[]={0xB5,0x62,0x06,0x13,0x04,0x00,0x01,0x00,0xF0,0x7D,0x8B,0x2E};
 
-// For thread safety, we do a WITH_LOCK on Wire (or Wire1) before accessing I2C. However,
-// this only exists in 0.8.0 and later. It's not possible to completely safe in threaded
-// mode on older Device OS.
-#if SYSTEM_VERSION >= 0x00080000
-#define LOCK_WIRE WITH_LOCK(wire)
-#else
-#define LOCK_WIRE
-#endif
+AssetTracker *AssetTracker::instance = 0;
+
 
 AssetTracker::AssetTracker() : LegacyAdapter(gps) {
-
+	instance = this;
 }
 
 AssetTracker::~AssetTracker() {
@@ -53,14 +48,17 @@ void AssetTracker::begin(void) {
 void AssetTracker::updateGPS(void) {
 	if (!useWire) {
 		while (serialPort.available() > 0) {
-			gps.encode(serialPort.read());
+			char c = (char)serialPort.read();
+			gps.encode(c);
+			if (externalDecoder) {
+				externalDecoder(c);
+			}
 		}
 	}
 	else {
 		uint8_t buf[32];
 
-		// LOCK_WIRE is WITH_LOCK(wire) on 0.8.0 and later
-		LOCK_WIRE {
+		WITH_LOCK(wire) {
 			uint16_t available = wireReadBytesAvailable();
 			if (available > 32) {
 				available = 32;
@@ -69,6 +67,9 @@ void AssetTracker::updateGPS(void) {
 				if (wireReadBytes(buf, available) == available) {
 					for(uint16_t ii = 0; ii < available; ii++) {
 						gps.encode(buf[ii]);
+						if (externalDecoder) {
+							externalDecoder(buf[ii]);
+						}
 					}
 				}
 			}
@@ -78,7 +79,7 @@ void AssetTracker::updateGPS(void) {
 
 void AssetTracker::startThreadedMode() {
 	if (thread == NULL) {
-		thread = new Thread("AssetTracker", threadFunctionStatic, this, OS_THREAD_PRIORITY_DEFAULT, 1024);
+		thread = new Thread("AssetTracker", threadFunctionStatic, this, OS_THREAD_PRIORITY_DEFAULT, 2048);
 	}
 }
 
@@ -95,6 +96,9 @@ void AssetTracker::threadFunctionStatic(void *param) {
 }
 
 void AssetTracker::gpsOn(void) {
+	if (!mutex) {
+		os_mutex_create(&mutex);
+	}
 	if (!useWire) {
 		serialPort.begin(GPS_BAUD);
 	}
@@ -107,32 +111,46 @@ void AssetTracker::gpsOff(void) {
 }
 
 void AssetTracker::sendCommand(const uint8_t *cmd, size_t len) {
-	if (!useWire) {
-		serialPort.write(cmd, len);
+
+	/*
+	Log.info("sendCommand len=%u", len);
+	Log.dump(cmd, len);
+	Log.print("\r\n");
+	 */
+
+	if (!mutex) {
+		// This is normally created in gpsOn but this is here for safety in case it's not called
+		os_mutex_create(&mutex);
 	}
-	else {
-		// LOCK_WIRE is WITH_LOCK(wire) on 0.8.0 and later
-		LOCK_WIRE {
-			size_t offset = 0;
 
-			while(offset < len) {
-				uint8_t res;
+	WITH_LOCK(*this) {
+		if (!useWire) {
+			serialPort.write(cmd, len);
+		}
+		else {
+			WITH_LOCK(wire) {
+				size_t offset = 0;
 
-				size_t reqLen = (len - offset);
-				if (reqLen > 32) {
-					reqLen = 32;
+				while(offset < len) {
+					uint8_t res;
+
+					size_t reqLen = (len - offset);
+					if (reqLen > 32) {
+						reqLen = 32;
+					}
+
+					wire.beginTransmission(wireAddr);
+
+					wire.write(&cmd[offset], reqLen);
+
+					offset += reqLen;
+
+					res = wire.endTransmission((offset >= len));
 				}
-
-				wire.beginTransmission(wireAddr);
-
-				wire.write(&cmd[offset], reqLen);
-
-				offset += reqLen;
-
-				res = wire.endTransmission((offset >= len));
 			}
 		}
 	}
+
 }
 
 bool AssetTracker::antennaInternal() {

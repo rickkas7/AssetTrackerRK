@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['legacyadapter',['LegacyAdapter',['../class_legacy_adapter.html',1,'']]]
+  ['legacyadapter_236',['LegacyAdapter',['../class_legacy_adapter.html',1,'']]]
 ];

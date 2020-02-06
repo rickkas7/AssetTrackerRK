@@ -1,9 +1,24 @@
 var searchData=
 [
-  ['age',['age',['../struct_tiny_g_p_s_location.html#ae5da08aba335d0515b7a84ce57b80179',1,'TinyGPSLocation::age()'],['../struct_tiny_g_p_s_date.html#af8b9c057a28dcb490081fcfde2a0ee11',1,'TinyGPSDate::age()'],['../struct_tiny_g_p_s_time.html#ae0aba0cbd875a3e1fe5d7872171e79fc',1,'TinyGPSTime::age()'],['../struct_tiny_g_p_s_decimal.html#a041cada3e406205d0878c9819eddbbbb',1,'TinyGPSDecimal::age()'],['../struct_tiny_g_p_s_integer.html#aabd55511befbd769155c69e0c1208691',1,'TinyGPSInteger::age()'],['../class_tiny_g_p_s_custom.html#af5347ee2785bca9acb5a0f16fcc68ea0',1,'TinyGPSCustom::age()']]],
-  ['altitude',['altitude',['../class_tiny_g_p_s_data.html#af708949fd5a52ca81d37656d2b157b3a',1,'TinyGPSData']]],
-  ['antennaexternal',['antennaExternal',['../class_asset_tracker.html#ae2ff3d749e0be82915b9f5fa6b73f622',1,'AssetTracker']]],
-  ['antennainternal',['antennaInternal',['../class_asset_tracker.html#a3e1f22e8433d0cac59ca8b058e900c4a',1,'AssetTracker']]],
-  ['assettracker',['AssetTracker',['../class_asset_tracker.html',1,'AssetTracker'],['../class_asset_tracker.html#a51012f759fe215c569e6094937d70d3f',1,'AssetTracker::AssetTracker()']]],
-  ['assettrackerrk',['AssetTrackerRK',['../index.html',1,'']]]
+  ['accuracy_0',['accuracy',['../class_assist_now_download.html#ac152d4809bb0ee7f60a4745a659c0ac5',1,'AssistNowDownload']]],
+  ['addhandler_1',['addHandler',['../class_ublox_command_base.html#ae086799cdb19344e81cc4fbb1579c552',1,'UbloxCommandBase']]],
+  ['age_2',['age',['../struct_tiny_g_p_s_location.html#ae5da08aba335d0515b7a84ce57b80179',1,'TinyGPSLocation::age()'],['../struct_tiny_g_p_s_date.html#af8b9c057a28dcb490081fcfde2a0ee11',1,'TinyGPSDate::age()'],['../struct_tiny_g_p_s_time.html#ae0aba0cbd875a3e1fe5d7872171e79fc',1,'TinyGPSTime::age()'],['../struct_tiny_g_p_s_decimal.html#a041cada3e406205d0878c9819eddbbbb',1,'TinyGPSDecimal::age()'],['../struct_tiny_g_p_s_integer.html#aabd55511befbd769155c69e0c1208691',1,'TinyGPSInteger::age()'],['../class_tiny_g_p_s_custom.html#af5347ee2785bca9acb5a0f16fcc68ea0',1,'TinyGPSCustom::age()']]],
+  ['alloc_3',['alloc',['../class_assist_now_download.html#a3be47b933f3e36e0750cdf9e82daf498',1,'AssistNowDownload']]],
+  ['altitude_4',['altitude',['../class_tiny_g_p_s_data.html#af708949fd5a52ca81d37656d2b157b3a',1,'TinyGPSData']]],
+  ['antennaexternal_5',['antennaExternal',['../class_asset_tracker.html#ae2ff3d749e0be82915b9f5fa6b73f622',1,'AssetTracker']]],
+  ['antennainternal_6',['antennaInternal',['../class_asset_tracker.html#a3e1f22e8433d0cac59ca8b058e900c4a',1,'AssetTracker']]],
+  ['appenddata_7',['appendData',['../class_ublox_command_base.html#a64d3c7bf15161fe9d7ddfa228e5027bc',1,'UbloxCommandBase']]],
+  ['appendi1_8',['appendI1',['../class_ublox_command_base.html#aae374f6e713344bbe13d186f7b143ead',1,'UbloxCommandBase']]],
+  ['appendi2_9',['appendI2',['../class_ublox_command_base.html#a65dadab2a36ba3cfc0c1517c52395ecd',1,'UbloxCommandBase']]],
+  ['appendi4_10',['appendI4',['../class_ublox_command_base.html#a87c0832061f228e8ec044fc4d0db027a',1,'UbloxCommandBase']]],
+  ['appendr4_11',['appendR4',['../class_ublox_command_base.html#aa9f5f4889713ab6be8b0ec9bab182495',1,'UbloxCommandBase']]],
+  ['appendr8_12',['appendR8',['../class_ublox_command_base.html#aca88125e18a5018d70cc594e4943824a',1,'UbloxCommandBase']]],
+  ['appendu1_13',['appendU1',['../class_ublox_command_base.html#a06d9d12a5f0c11844a939dba462a2781',1,'UbloxCommandBase']]],
+  ['appendu2_14',['appendU2',['../class_ublox_command_base.html#a0eea3ddda57d3d85983bb0338b56b9c3',1,'UbloxCommandBase']]],
+  ['appendu4_15',['appendU4',['../class_ublox_command_base.html#aa027e266c4b9ad381bfb572f81496d0d',1,'UbloxCommandBase']]],
+  ['assettracker_16',['AssetTracker',['../class_asset_tracker.html',1,'AssetTracker'],['../class_asset_tracker.html#a51012f759fe215c569e6094937d70d3f',1,'AssetTracker::AssetTracker()']]],
+  ['assistnowdownload_17',['AssistNowDownload',['../class_assist_now_download.html',1,'AssistNowDownload'],['../class_assist_now_download.html#a61d3a5bd9caa7285bdcccd15096d1078',1,'AssistNowDownload::AssistNowDownload()']]],
+  ['assistnowkey_18',['assistNowKey',['../class_ublox_assist_now.html#aaa2e872e3de140f982cba10307cf5bd1',1,'UbloxAssistNow']]],
+  ['assistnowserver_19',['assistNowServer',['../class_ublox_assist_now.html#afae8d36016454c006c1a2add86a9e00b',1,'UbloxAssistNow']]],
+  ['assettrackerrk_20',['AssetTrackerRK',['../index.html',1,'']]]
 ];

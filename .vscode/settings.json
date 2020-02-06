@@ -1,0 +1,22 @@
+{
+    "cortex-debug.openocdPath": "${command:particle.getDebuggerOpenocdPath}",
+    "particle.targetPlatform": "electron",
+    "particle.firmwareVersion": "1.4.4",
+    "particle.targetDevice": "electron3",
+    "files.associations": {
+        "functional": "cpp"
+    },
+    "cSpell.words": [
+        "Adafruit",
+        "EEPROM",
+        "GNSS",
+        "GPRS",
+        "TTFF",
+        "UMTS",
+        "Ublox",
+        "blox",
+        "geolocation",
+        "supercap",
+        "webhook"
+    ]
+}

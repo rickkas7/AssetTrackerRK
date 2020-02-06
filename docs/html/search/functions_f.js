@@ -1,7 +1,28 @@
 var searchData=
 [
-  ['second',['second',['../struct_tiny_g_p_s_time.html#a729cab36ced07eb5607503663fbe33e8',1,'TinyGPSTime']]],
-  ['sentenceswithfix',['sentencesWithFix',['../class_tiny_g_p_s_plus.html#a8093eef1ee9f97b5293f1048320756e3',1,'TinyGPSPlus']]],
-  ['setuplowpowerwakemode',['setupLowPowerWakeMode',['../class_asset_tracker.html#ade6b210c1a593788285e2f9075c0fbf1',1,'AssetTracker']]],
-  ['startthreadedmode',['startThreadedMode',['../class_asset_tracker.html#aed1b1006723346dae18cc21ad23dff74',1,'AssetTracker']]]
+  ['second_372',['second',['../struct_tiny_g_p_s_time.html#a729cab36ced07eb5607503663fbe33e8',1,'TinyGPSTime']]],
+  ['sendcommand_373',['sendCommand',['../class_asset_tracker.html#a53db34482875ebfd9e3288e8dcb66cb5',1,'AssetTracker::sendCommand()'],['../class_ublox.html#a7b00391f9b01d35656ebef9f43c656e5',1,'Ublox::sendCommand()']]],
+  ['sentenceswithfix_374',['sentencesWithFix',['../class_tiny_g_p_s_plus.html#a8093eef1ee9f97b5293f1048320756e3',1,'TinyGPSPlus']]],
+  ['setantenna_375',['setAntenna',['../class_ublox.html#a6f811644f1ed66abfb058cb20d95ede1',1,'Ublox']]],
+  ['setclassid_376',['setClassId',['../class_ublox_command_base.html#abb64996e19ca00e8afaf11713e47e929',1,'UbloxCommandBase']]],
+  ['setdata_377',['setData',['../class_ublox_command_base.html#acb7a95332632c5066d69ce61c583d14a',1,'UbloxCommandBase']]],
+  ['setexternaldecoder_378',['setExternalDecoder',['../class_asset_tracker.html#a142b530f829a25e91ea05c1abc61e1a0',1,'AssetTracker']]],
+  ['seti1_379',['setI1',['../class_ublox_command_base.html#a7e3b8317e6f2cec6ad5de724d16b9629',1,'UbloxCommandBase']]],
+  ['seti2_380',['setI2',['../class_ublox_command_base.html#ab18b3a8bed75047390e85a1bf32c7452',1,'UbloxCommandBase']]],
+  ['seti4_381',['setI4',['../class_ublox_command_base.html#aad443d6a2899b9a8c15a6e13cdbc3260',1,'UbloxCommandBase']]],
+  ['setr4_382',['setR4',['../class_ublox_command_base.html#a84a9d4e1f5f06cb347dadae334cf177e',1,'UbloxCommandBase']]],
+  ['setr8_383',['setR8',['../class_ublox_command_base.html#abe715ff5f6db189e933e2ec54385fd9b',1,'UbloxCommandBase']]],
+  ['setu1_384',['setU1',['../class_ublox_command_base.html#a304c0f303a31f10fa11ce1b6ffea6772',1,'UbloxCommandBase']]],
+  ['setu2_385',['setU2',['../class_ublox_command_base.html#a9fc951ba43cfb76a4bb04ab72ab22428',1,'UbloxCommandBase']]],
+  ['setu4_386',['setU4',['../class_ublox_command_base.html#aa857449f4958362f3bdd6694efe7e9d8',1,'UbloxCommandBase']]],
+  ['setup_387',['setup',['../class_ublox.html#adf427c58e8999919b20e2b1248f1ee88',1,'Ublox::setup()'],['../class_ublox_assist_now.html#a72b8e75276f737cb9f165a0976f37f0f',1,'UbloxAssistNow::setup()']]],
+  ['setuplowpowerwakemode_388',['setupLowPowerWakeMode',['../class_asset_tracker.html#ade6b210c1a593788285e2f9075c0fbf1',1,'AssetTracker']]],
+  ['startthreadedmode_389',['startThreadedMode',['../class_asset_tracker.html#aed1b1006723346dae18cc21ad23dff74',1,'AssetTracker']]],
+  ['statedone_390',['stateDone',['../class_ublox_assist_now.html#afc90b4b9ace7297cd7681fc7a6834047',1,'UbloxAssistNow']]],
+  ['statereadresponse_391',['stateReadResponse',['../class_ublox_assist_now.html#ac8790e562228f9e874a64f418c36e37c',1,'UbloxAssistNow']]],
+  ['statesendrequest_392',['stateSendRequest',['../class_ublox_assist_now.html#a57a07adfe7daa7a498c06de258b526b7',1,'UbloxAssistNow']]],
+  ['statesendtogps_393',['stateSendToGPS',['../class_ublox_assist_now.html#a508af88970b27fe72d8f1dd094cd7c82',1,'UbloxAssistNow']]],
+  ['statewaitconnected_394',['stateWaitConnected',['../class_ublox_assist_now.html#aca720ed4c9b8eb18077c91817d9b578f',1,'UbloxAssistNow']]],
+  ['statewaitlocation_395',['stateWaitLocation',['../class_ublox_assist_now.html#a07cf122acc31193662e400abb43af41e',1,'UbloxAssistNow']]],
+  ['subscriptionhandler_396',['subscriptionHandler',['../class_ublox_assist_now.html#a2ebead4980c8a9c28e11673e8d254c3c',1,'UbloxAssistNow']]]
 ];

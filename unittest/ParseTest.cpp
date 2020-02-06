@@ -3,8 +3,11 @@
 #include "Adafruit_GPS.h"
 #include "TinyGPS++.h"
 #include "LegacyAdapter.h"
+#include "UbloxGPS.h"
 
 int test1();
+int test2();
+
 bool approximatelyEqualFloat(float f1, float f2, float tolerance = 0.0005);
 
 int main(int argc, char *argv[]) {
@@ -13,7 +16,10 @@ int main(int argc, char *argv[]) {
 	if (res) {
 		return res;
 	}
-
+	res = test2();
+	if (res) {
+		return res;
+	}
 	return 0;
 }
 
@@ -591,3 +597,70 @@ int test1() {
 	printf("test1 completed\n");
 	return 0;
 }
+
+void compareBinary(const uint8_t *expected, const uint8_t *actual, size_t len, int line) {
+	for(size_t ii = 0; ii < len; ii++) {
+		if (expected[ii] != actual[ii]) {
+			printf("data mismatch ii=%lu expected=%02x actual=%02x line=%d\n", ii, expected[ii], actual[ii], line);
+			break;
+		}
+	}
+}
+
+static uint8_t internalANT[]={0xB5,0x62,0x06,0x13,0x04,0x00,0x00,0x00,0xF0,0x7D,0x8A,0x2A};
+static uint8_t externalANT[]={0xB5,0x62,0x06,0x13,0x04,0x00,0x01,0x00,0xF0,0x7D,0x8B,0x2E};
+
+int test2() {
+	printf("test2 started\n");
+	{
+		UbloxCommand<16> cmd;
+
+		cmd.setClassId(0x06, 0x13);
+
+		// flags = 0
+		// (pinSwitch = false)
+		cmd.appendU2(0x0000);
+
+		// pins = 0x7DF0
+		// reconfig = false
+		// pinOCD = 0b11111 = 31 (not used)
+		// pinSCD = 0b01111 = 15 (not used)
+		// pinSwitch = 0b10000 = 16
+		cmd.appendU2(0x7DF0);
+
+		cmd.updateChecksum();
+
+		if (cmd.getSendLength() != sizeof(internalANT)) {
+			printf("wrong length %lu expected %lu line=%d\n", cmd.getSendLength(), sizeof(internalANT), __LINE__);
+		}
+		compareBinary(internalANT, cmd.getBuffer(), cmd.getSendLength(), __LINE__);
+	}
+
+	{
+		UbloxCommand<16> cmd;
+
+		cmd.setClassId(0x06, 0x13);
+
+		// flags = 0x0001
+		// (pinSwitch = true)
+		cmd.appendU2(0x0001);
+
+		// pins = 0x7DF0
+		// reconfig = false
+		// pinOCD = 0b11111 = 31 (not used)
+		// pinSCD = 0b01111 = 15 (not used)
+		// pinSwitch = 0b10000 = 16
+		cmd.appendU2(0x7DF0);
+
+		cmd.updateChecksum();
+
+		if (cmd.getSendLength() != sizeof(externalANT)) {
+			printf("wrong length %lu expected %lu line=%d\n", cmd.getSendLength(), sizeof(externalANT), __LINE__);
+		}
+		compareBinary(externalANT, cmd.getBuffer(), cmd.getSendLength(), __LINE__);
+	}
+
+	printf("test2 completed\n");
+	return 0;
+}
+

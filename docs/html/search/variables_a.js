@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['time',['time',['../class_tiny_g_p_s_data.html#aed95d00abdc0ef8b515fed6789973914',1,'TinyGPSData']]]
+  ['negative_458',['negative',['../struct_raw_degrees.html#a39c31d2d0332155a4d2c975cec0a796f',1,'RawDegrees']]]
 ];

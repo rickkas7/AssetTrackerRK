@@ -181,8 +181,32 @@ public:
 	 */
 	TinyGPSPlus *getTinyGPSPlus();
 
-	// This is defined in Legacy Adapter - probably should delete this
-	// static const unsigned long MAX_GPS_AGE_MS = 10000; // GPS location must be newer than this to be considered valid
+
+	/**
+	 * @brief Sets the external decoder function
+	 * 
+	 * @param fn function set. Replaces any existing function. Set to 0 to remove.
+	 * 
+	 * This is used by the UbloxGPS module to hook into the GPS decoding loop. You
+	 * probably won't have to use this directly. Other brands of GPS that decode
+	 * things that TinyGPS++ can't might also use this to hook in.
+	 */
+	void setExternalDecoder(std::function<bool(char)> fn) { externalDecoder = fn; };
+
+	/**
+	 * @brief Lock the mutex. Used to prevent multiple threads from writing to the GPS at the same time
+	 */
+	void lock() { os_mutex_lock(mutex); };
+
+	/**
+	 * @brief Lock the mutex. Used to prevent multiple threads from writing to the GPS at the same time
+	 */
+	void unlock() { os_mutex_unlock(mutex); };
+
+	/**
+	 * @brief Get the singleton instance of this class
+	 */
+	static AssetTracker *getInstance() { return instance; }; 
 
 private:
 	uint16_t wireReadBytesAvailable();
@@ -196,6 +220,9 @@ private:
 	uint8_t wireAddr = 0x42;
 	USARTSerial &serialPort = Serial1;
 	Thread *thread = NULL;
+	os_mutex_t mutex = 0;
+	std::function<bool(char)> externalDecoder = 0;
+	static AssetTracker *instance;
 };
 
 #endif /* __ASSETTRACKERRK_H */

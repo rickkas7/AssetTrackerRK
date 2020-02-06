@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['satellites',['satellites',['../class_tiny_g_p_s_data.html#a127ad276668e9730c351d8289f56582a',1,'TinyGPSData']]],
-  ['speed',['speed',['../class_tiny_g_p_s_data.html#a2fe5991a7ca632db4788d5701ed38273',1,'TinyGPSData']]]
+  ['max_5fgps_5fage_5fms_457',['MAX_GPS_AGE_MS',['../class_legacy_adapter.html#a6a83719c85c80d1314d56e8bfe717a3d',1,'LegacyAdapter']]]
 ];

@@ -378,12 +378,12 @@ struct TinyGPSInteger
 {
 	friend class TinyGPSPlus;
 public:
-//	/**
-//	 * @brief Returns true if the data is valid
-//	 *
-//	 * The valid flag will be false if the GPS loses its fix, but will not be invalidated if the GPS
-//	 * stops returning data. If that is a possibility, you should also check the age.
-//	 */
+	/**
+	 * @brief Returns true if the data is valid
+	 *
+	 * The valid flag will be false if the GPS loses its fix, but will not be invalidated if the GPS
+	 * stops returning data. If that is a possibility, you should also check the age.
+	 */
 	bool isValid() const    { return valid; }
 
 	/**

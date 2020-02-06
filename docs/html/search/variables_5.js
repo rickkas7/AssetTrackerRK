@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['hdop',['hdop',['../class_tiny_g_p_s_data.html#a93218e3835624d9d99ea2a22bc204578',1,'TinyGPSData']]]
+  ['geoidseparation_444',['geoidSeparation',['../class_tiny_g_p_s_data.html#a18c4c4603508bd757443410f349a8c25',1,'TinyGPSData']]]
 ];
