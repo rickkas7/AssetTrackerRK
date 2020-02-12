@@ -113,5 +113,8 @@ options for controlling it will be added later.
 - Added u-blox [AssistNow](https://github.com/rickkas7/AssetTrackerRK/blob/master/AssistNow.md) support (beta)
 - Added u-center pass-through example
 
+### Updated for 0.3.2
+
+- Updated to LIS3DH 0.2.5 to fix a SOS+1 at startup when used with Device OS 1.5.0.
 
 
