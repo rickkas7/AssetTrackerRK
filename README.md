@@ -117,4 +117,8 @@ options for controlling it will be added later.
 
 - Updated to LIS3DH 0.2.5 to fix a SOS+1 at startup when used with Device OS 1.5.0.
 
+### Updated for 0.3.3
+
+- Update to LIS3DH 0.2.6 to fix compiler error for ambiguous requestFrom with 1.5.0-rc.2.
+
 
