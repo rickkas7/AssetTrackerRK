@@ -5,7 +5,7 @@
 - build: examples/3_WakeOnMove
   electron: [latest]
 - build: examples/4_AccelerometerSamples
-  electron: [latest]
+  electron: [1.5.1-rc.1,latest]
 - build: examples/5_AccelerometerDirection
   electron: [latest]
 - build: examples/6_BackwardCompatibleAPI
