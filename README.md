@@ -121,8 +121,12 @@ options for controlling it will be added later.
 
 - Update to LIS3DH 0.2.6 to fix compiler error for ambiguous requestFrom with 1.5.0-rc.2.
 
-### Updated for 0.3.4
+### Updated for 0.3.4 (2020-05-04)
 
 - Update to LIS3DH 0.2.7 to fix compiler error for undefined conversion to SpiClass with 1.5.1-rc.1. 
+
+### Updated for 0.3.5 (2020-05-04)
+
+- Update to LIS3DH 0.2.8 to fix compiler error for undefined conversion to SpiClass with 1.5.1-rc.1. The fix in 0.2.7 didn't work right with SPI1.
 
 
