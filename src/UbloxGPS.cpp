@@ -1,6 +1,8 @@
 
 #include "UbloxGPS.h"
 
+#include "AssetTrackerRK.h"
+
 // Define this for regular logging (comment out to save code/string space, about 682 bytes).
 // Note: You can also just turn off app.ublox messages in your log handler. It won't save code
 // space but it will reduce the stuff in your logs.
@@ -37,8 +39,18 @@ static Logger _log("app.ublox");
 UbloxCommandBase::UbloxCommandBase(uint8_t *buffer, size_t bufferSize) : buffer(buffer), bufferSize(bufferSize) {
 }
 
-UbloxCommandBase::~UbloxCommandBase() {
+UbloxCommandBase::UbloxCommandBase(size_t bufferSize) : bufferSize(bufferSize) {
+	buffer = new uint8_t[bufferSize];
+	if (buffer) {
+		deleteBuffer = true;
+	}
+}
 
+UbloxCommandBase::~UbloxCommandBase() {
+	if (deleteBuffer) {
+		delete[] buffer;
+		buffer = 0;
+	}
 }
 
 bool UbloxCommandBase::decode(char ch) {
@@ -168,13 +180,22 @@ void UbloxCommandBase::removeHandler(UbloxMessageHandler *handler) {
 }
 
 void UbloxCommandBase::callHandlers() {
-	for(auto it = handlers.begin(); it != handlers.end(); it++) {
+	for(auto it = handlers.begin(); it != handlers.end(); ) {
 		auto handler = *it;
+		bool increment = true;
 
 		if (handler->classFilter == 0xff || handler->classFilter == getMsgClass()) {
 			if (handler->idFilter == 0xff || handler->idFilter == getMsgId()) {
 				handler->handler(this);
+				if (handler->removeAndDelete) {
+					it = handlers.erase(it);
+					delete handler;
+					increment = false;
+				}
 			}
+		}
+		if (increment) {
+			it++;
 		}
 	}
 }
@@ -279,6 +300,25 @@ void UbloxCommandBase::discardToNextSync1() {
 	state = State::LOOKING_FOR_START;
 }
 
+UbloxCommandBase *UbloxCommandBase::clone() {
+	UbloxCommandBase *copy = new UbloxCommandBase(payloadLen);
+	if (copy) {
+		if (copy->buffer) {
+			memcpy(copy->buffer, buffer, payloadLen);
+			copy->bufferOffset = bufferOffset;
+			return copy;
+		}
+		else {
+			delete copy;
+			return NULL;
+		}
+	}
+	else {
+		return NULL;
+	}
+}
+
+
 Ublox *Ublox::instance = 0;
 
 
@@ -290,13 +330,13 @@ Ublox::~Ublox() {
 }
 
 void Ublox::setup() {
-	AssetTracker::getInstance()->setExternalDecoder([this](char ch) {
+	AssetTrackerBase::getInstance()->setExternalDecoder([this](char ch) {
 		return decode(ch);
 	});
 }
 
 void Ublox::loop() {
-
+	
 }
 
 
@@ -310,8 +350,7 @@ void Ublox::getValue(uint8_t msgClass, uint8_t msgId, std::function<void(UbloxCo
 	handler->idFilter = msgId;
 	handler->handler = [this,handler,callback](UbloxCommandBase *cmd) {
 		callback(cmd);
-		removeHandler(handler);
-		delete handler;
+		handler->removeAndDelete = true;
 	};
 
 	addHandler(handler);
@@ -326,7 +365,7 @@ void Ublox::getValue(uint8_t msgClass, uint8_t msgId, std::function<void(UbloxCo
 void Ublox::sendCommand(UbloxCommandBase *cmd) {
 	cmd->updateChecksum();
 
-	AssetTracker::getInstance()->sendCommand(cmd->getBuffer(), cmd->getSendLength());
+	AssetTrackerBase::getInstance()->sendCommand(cmd->getBuffer(), cmd->getSendLength());
 }
 
 
@@ -377,6 +416,85 @@ void Ublox::enableAckAiding() {
 
 }
 
+void Ublox::enableExtIntBackup(bool enable) {
+
+	getValue(0x06, 0x3B, [this, enable](UbloxCommandBase *cmd) {
+		// Clear: 
+		//	extintSel (0x10) - use EXTINT0
+		//	extintWake (0x20) - disable
+		// Set to enable
+		// 	extintBackup (0x40) - force receiver into BACKUP mode when selected EXTINT pin is 'low'
+
+		uint32_t value = cmd->getU4(0x04); // Flags
+		value &= ~0x00000070;
+		if (enable) {
+			value |= 0x00000040;
+		}
+		cmd->setU1(0x04, value);
+		
+		sendCommand(cmd);
+	});
+
+}
+
+void Ublox::disableTimePulse() {
+	// CFG-TP5
+	getValue(0x06, 0x31, [this](UbloxCommandBase *cmd) {
+		uint32_t flags = cmd->getU4(28);
+
+		flags &= ~0x0001;
+
+		cmd->setU4(28, flags);
+
+		sendCommand(cmd);
+
+		updateMON_HW([](UbloxCommandBase *cmd) {
+			// Set VP entry 0x0b (TIMEPULSE) to PIO (0xff)
+			cmd->setU1(28 + 0x0b, 0xff);
+			return true;
+		});
+	});
+}
+
+void Ublox::setPIO(uint32_t andMaskSel, uint32_t orMaskSel, uint32_t andMaskDir, uint32_t orMaskDir, uint32_t andMaskVal, uint32_t orMaskVal) {
+
+	updateMON_HW([andMaskSel, orMaskSel, andMaskDir, orMaskDir, andMaskVal, orMaskVal](UbloxCommandBase *cmd) {
+		uint32_t value = cmd->getU4(0); // pinSel
+		value &= andMaskSel;
+		value |= orMaskSel;
+		Log.info("pinSel=%08lx", value);
+		cmd->setU4(0, value);
+		
+		value = cmd->getU4(8); // pinDir
+		value &= andMaskDir;
+		value |= orMaskDir;
+		Log.info("pinDir=%08lx", value);
+		cmd->setU4(8, value);
+
+		value = cmd->getU4(12); // pinVal
+		value &= andMaskVal;
+		value |= orMaskVal;
+		Log.info("pinVal=%08lx", value);
+		cmd->setU4(12, value);
+
+		return true; 
+	});
+
+}
+
+void Ublox::updateMON_HW(std::function<bool(UbloxCommandBase *cmd)> updateFn) {
+	// MON-HW
+	getValue(0x0a, 0x09, [this, updateFn](UbloxCommandBase *cmd) {
+		
+		if (updateFn(cmd)) {
+			// updateFn returned true, so send the modified command
+			sendCommand(cmd);
+		}
+	});
+
+}
+
+
 
 UbloxAssistNow *UbloxAssistNow::instance = 0;
 static const char *ASSIST_NOW_EVENT_NAME = "AssistNow";
@@ -407,7 +525,7 @@ void UbloxAssistNow::stateWaitConnected() {
 	}
 
 	// See if we have a GPS fix. If we
-	if (AssetTracker::getInstance()->gpsFix()) {
+	if (AssetTrackerBase::getInstance()->gpsFix()) {
 		UBLOX_DEBUG(("Already have GPS fix, skipping AssistNow"));
 		stateHandler = &UbloxAssistNow::stateDone;
 		return;
@@ -743,7 +861,7 @@ void UbloxAssistNow::stateSendToGPS() {
 	}
 #endif /* ASSISTNOW_DEBUG_ENABLE */
 
-	AssetTracker::getInstance()->sendCommand(&download->buffer[download->bufferOffset], msgLen);
+	AssetTrackerBase::getInstance()->sendCommand(&download->buffer[download->bufferOffset], msgLen);
 	download->bufferOffset += msgLen;
 }
 

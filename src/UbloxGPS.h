@@ -3,7 +3,6 @@
 
 #include "Particle.h"
 
-#include "AssetTrackerRK.h"
 #include "google-maps-device-locator.h" // Only used if UbloxAssistNow is used
 
 #include <vector>
@@ -32,6 +31,15 @@ typedef struct {
 	 * @brief Function top call on match
 	 */
 	std::function<void(UbloxCommandBase *cmd)> handler;
+
+	/**
+	 * @brief Remove and delete this handler
+	 * 
+	 * If true, on returning from the handler, remove from the list of handlers and 
+	 * delete the UbloxMessageHandler object. This is only done after the handler
+	 * is called from callHandlers.
+	 */
+	bool removeAndDelete = false;
 } UbloxMessageHandler;
 
 
@@ -57,6 +65,14 @@ public:
 	 * memory if the buffer is smaller than that.
 	 */
 	UbloxCommandBase(uint8_t *buffer, size_t bufferSize);
+
+	/**
+	 * @brief Construct a UbloxCommandBase object with a buffer allocated on the heap.
+	 *
+	 * @param bufferSize Size of the buffer, a minimum of HEADER_PLUS_CRC_LEN (8) bytes. You will overwrite
+	 * memory if the buffer is smaller than that.
+	 */
+	UbloxCommandBase(size_t bufferSize);
 
 	/**
 	 * @brief Destructor
@@ -473,7 +489,15 @@ public:
 	 */
 	size_t getSendLength() const { return HEADER_PLUS_CRC_LEN + payloadLen; };
 
-	
+	/**
+	 * @brief Set the deleteBuffer flag for this object
+	 */
+	UbloxCommandBase &withDeleteBuffer(bool value = true) { deleteBuffer = value; return *this; };
+
+	/**
+	 * @brief Make a modifyable clone of this object on the heap
+	 */
+	UbloxCommandBase *clone();
 
 protected:
 	/**
@@ -499,6 +523,7 @@ protected:
 	size_t payloadLen = 0;  						//!< Length of the data payload (0 = no data). This does not include the header or CRC.
 	State state = State::LOOKING_FOR_START;  		//!< Current parsing state
 	std::vector<UbloxMessageHandler*> handlers;  	//!< Vector of message handler objects, contains filter and callback function to handle incoming messages
+	bool deleteBuffer = false;						//!< Delete buffer in the destructor
 };
 
 /**
@@ -598,6 +623,26 @@ public:
 	 */
 	void enableAckAiding();
 
+	/**
+	 * @brief Enable EXTINT Backup mode
+	 * 
+	 * This is used to put the GNSS in sleep ("Backup") mode using the EXTINT pin. If enabled, 
+	 *   LOW = sleep/backup, HIGH = normal operation
+	 * The GNSS can still wake up for scheduled operations.
+	 * 
+	 * If the Force-OFF (extintBackup) feature in UBX-CFG-PM2 is enabled, the receiver will enter Inactive 
+	 * states for as long as the configured EXTINT pin is set to 'low' until the next wake up event. Any 
+	 * wake-up event can wake up the receiver even while the EXTINT pin is set to 'low' (see Wake up). 
+	 * However, if the pin stay at 'low' state, the receiver will only wake up for the time needed to 
+	 * read the configuration pin settings then it will enter the Inactive state again.
+	 */
+	void enableExtIntBackup(bool enable = true);
+
+	void setPIO(uint32_t andMaskSel, uint32_t orMaskSel, uint32_t andMaskDir, uint32_t orMaskDir, uint32_t andMaskVal, uint32_t orMaskVal);
+
+	void updateMON_HW(std::function<bool(UbloxCommandBase *cmd)> updateFn);
+
+	void disableTimePulse();
 
 	/**
 	 * @brief Constants for whether to do a hot, warm, or cold restart using resetReceiver
