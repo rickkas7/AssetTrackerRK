@@ -5,6 +5,7 @@
 
 #include "google-maps-device-locator.h" // Only used if UbloxAssistNow is used
 
+#include <deque>
 #include <vector>
 
 class UbloxCommandBase; // Foreward declaration
@@ -13,6 +14,13 @@ class UbloxCommandBase; // Foreward declaration
  * @brief Structure holding information about a message handler
  */
 typedef struct {
+	enum class Reason {
+		DATA,
+		TIMEOUT,
+		ACK,
+		NACK
+	};
+
 	/**
 	 * @brief u-box message class (first of the two bytes)
 	 * 
@@ -30,7 +38,7 @@ typedef struct {
 	/**
 	 * @brief Function top call on match
 	 */
-	std::function<void(UbloxCommandBase *cmd)> handler;
+	std::function<void(UbloxCommandBase *cmd, Reason reason)> handler;
 
 	/**
 	 * @brief Remove and delete this handler
@@ -40,8 +48,27 @@ typedef struct {
 	 * is called from callHandlers.
 	 */
 	bool removeAndDelete = false;
+
+	/**
+	 * @brief For CFG messages the original class ID for use in the ACK/NACK handler
+	 */
+	uint8_t origClassId = 0;
+
+	/**
+	 * @brief For CFG messages the original message ID for use in the ACK/NACK handler
+	 */
+	uint8_t origMsgId = 0;
+
+	/**
+	 * @brief Timeout time for ACK/NACK or response
+	 */
+	uint64_t timeout = 0;
 } UbloxMessageHandler;
 
+/**
+ * @brief Command handler
+ */
+typedef std::function<void(UbloxCommandBase *, UbloxMessageHandler::Reason reason)> UbloxCommandCallback;
 
 /**
  * @brief Class for reading or writing a u-blox command.
@@ -108,34 +135,6 @@ public:
 	 * The updateChecksum() method is typically used to calculate it for sending.
 	 */
 	void calculateChecksum(uint8_t &ckA, uint8_t &ckB) const;
-
-	/**
-	 * @brief Add a message handler
-	 *
-	 * @param handler A pointer to a filled in UbloxMessageHandler structure.
-	 *
-	 * Note the handler object  must remain valid until removeHandler is called on it, so you probably want
-	 * to make it a global variable or allocated with new. The exception is if you have a blocking function
-	 * call and add and remove the handler within the scope of the function, then you can allocate the
-	 * object on the stack.
-	 */
-	void addHandler(UbloxMessageHandler *handler);
-
-	/**
-	 * @brief Remove a message handler
-	 * 
-	 * @param handler The handler to remove (same value you passed to addHandler)
-	 * 
-	 * Note this will not free handler as it can't know if it was allocated on the stack, as a 
-	 * class member, global variable, or new. If you allocated the object with new, don't forget
-	 * to delete it!
-	 */
-	void removeHandler(UbloxMessageHandler *handler);
-
-	/**
-	 * @brief Used internally to call all of the message handlers that match this class and id
-	 */
-	void callHandlers();
 
 	/**
 	 * @brief Gets the message class of the current command
@@ -499,6 +498,15 @@ public:
 	 */
 	UbloxCommandBase *clone();
 
+	static const uint8_t CLASS_UBX_ACK = 0x05;			// 
+	static const uint8_t   MSG_UBX_ACK_ACK = 0x01;		// 
+	static const uint8_t   MSG_UBX_ACK_NACK = 0x00;		// 
+
+	static const uint8_t CLASS_UBX_CFG = 0x06;			// 
+
+	static const uint8_t CLASS_UBX_ANY = 0xff;
+	static const uint8_t MSG_UBX_ANY = 0xff;
+
 protected:
 	/**
 	 * @brief u-blox parsing state constants
@@ -522,7 +530,6 @@ protected:
 	size_t bufferOffset = 0;  						//!< Current offset being written to in buffer when using encode()
 	size_t payloadLen = 0;  						//!< Length of the data payload (0 = no data). This does not include the header or CRC.
 	State state = State::LOOKING_FOR_START;  		//!< Current parsing state
-	std::vector<UbloxMessageHandler*> handlers;  	//!< Vector of message handler objects, contains filter and callback function to handle incoming messages
 	bool deleteBuffer = false;						//!< Delete buffer in the destructor
 };
 
@@ -578,6 +585,49 @@ public:
 	 */
 	void loop();
 
+	/**
+	 * @brief Add a message handler
+	 *
+	 * @param handler A pointer to a filled in UbloxMessageHandler structure.
+	 *
+	 * Note the handler object  must remain valid until removeHandler is called on it, so you probably want
+	 * to make it a global variable or allocated with new. The exception is if you have a blocking function
+	 * call and add and remove the handler within the scope of the function, then you can allocate the
+	 * object on the stack.
+	 */
+	void addHandler(UbloxMessageHandler *handler);
+
+	/**
+	 * @brief Remove a message handler
+	 * 
+	 * @param handler The handler to remove (same value you passed to addHandler)
+	 * 
+	 * Note this will not free handler as it can't know if it was allocated on the stack, as a 
+	 * class member, global variable, or new. If you allocated the object with new, don't forget
+	 * to delete it!
+	 */
+	void removeHandler(UbloxMessageHandler *handler);
+
+	/**
+	 * @brief Returns true if cmd has a registered command handler
+	 * 
+	 * This eliminates the need to clone if the message will just be discarded.
+	 */
+	bool hasHandler(UbloxCommandBase *cmd);
+
+	/**
+	 * @brief Used internally from loop to call all of the message handlers that match this class and id
+	 */
+	void callHandlers();
+
+	/**
+	 * @brief Add a command to be handled from loop
+	 * 
+	 * @param cmd The command object. It must be a copy, returned from clone().
+	 */
+	void addCommandToHandle(UbloxCommandBase *cmd);
+
+	void configCommand(UbloxCommandBase *cmd, UbloxCommandCallback callback, unsigned long timeout = 5000);
 
 	/**
 	 * @brief Get a command value from the u-blox modem
@@ -601,7 +651,7 @@ public:
 	 * reading thread so you should not do operations that block or are lengthy from the callback
 	 * as it will affect GPS performance. 
 	 */
-	void getValue(uint8_t msgClass, uint8_t msgId, std::function<void(UbloxCommandBase *)> callback);
+	void getValue(uint8_t msgClass, uint8_t msgId, UbloxCommandCallback callback, unsigned long timeout = 5000);
 
 	/**
 	 * @brief Send a command top the GPS
@@ -612,6 +662,7 @@ public:
 	 * send any arbitrary command.
 	 */
 	void sendCommand(UbloxCommandBase *cmd);
+
 
 	/**
 	 * @brief Sets the antenna to external or internal on the AssetTracker V2.
@@ -643,7 +694,7 @@ public:
 	void updateMON_HW(std::function<bool(UbloxCommandBase *cmd)> updateFn);
 
 	void disableTimePulse();
-
+// , std::function<void()> completion
 	/**
 	 * @brief Constants for whether to do a hot, warm, or cold restart using resetReceiver
 	 */
@@ -684,6 +735,9 @@ public:
 	static Ublox *getInstance() { return instance; };
 
 protected:
+	std::deque<UbloxCommandBase *> commandsToHandle; 
+	std::vector<UbloxMessageHandler*> handlers;  	//!< Vector of message handler objects, contains filter and callback function to handle incoming messages
+
 	static Ublox *instance;	//!< Singleton instance of this class 
 };
 

@@ -364,7 +364,7 @@ void AssetTrackerFeather6::setup() {
 
 	waitFor(Serial.isConnected, 10000);
 
-	//Ublox::disableTimePulse();
+	Ublox::disableTimePulse();
 
 	Ublox::setPIO(~0, 0x0800, ~0, 0x0800, ~0, 0x800);
 

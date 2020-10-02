@@ -62,14 +62,13 @@ void displayInfo()
 				Particle.publish("gps", buf, PRIVATE);
 			}
 		}
-
-        t.getValue(0x0A, 0x09, [](UbloxCommandBase *cmd) {
+/*
+        t.getValue(0x0A, 0x09, [](UbloxCommandBase *cmd, UbloxMessageHandler::Reason reason) {
             Log.info("MON-HW len=%u", cmd->getPayloadLen());
             Log.dump(cmd->getData(), 60);
             Log.print("\n");
         });
-
-
+*/
 	}
 
 }

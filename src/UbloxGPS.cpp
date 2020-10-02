@@ -125,8 +125,14 @@ bool UbloxCommandBase::decode(char ch) {
 			}
 #endif // UBLOX_DEBUG_VERBOSE_ENABLE
 
-			// Got a valid message, call registered message handlers
-			callHandlers();
+			if (Ublox::getInstance()->hasHandler(this)) {
+				// Got a valid message with a handler, call registered message handlers
+				// from the loop thread. This requires copying the data from this message.
+				UbloxCommandBase *cmd = clone();
+				if (cmd) {
+					Ublox::getInstance()->addCommandToHandle(cmd);
+				}
+			}
 
 			// Discard data and search for sync again
 			bufferOffset = 0;
@@ -158,45 +164,6 @@ void UbloxCommandBase::calculateChecksum(uint8_t &ckA, uint8_t &ckB) const {
 	for(size_t ii = CRC_START_OFFSET; ii < (CRC_START_OFFSET + payloadLen + CRC_HEADER_LEN); ii++) {
 		ckA += buffer[ii];
 		ckB += ckA;
-	}
-}
-
-void UbloxCommandBase::addHandler(UbloxMessageHandler *handler) {
-	handlers.push_back(handler);
-}
-
-void UbloxCommandBase::removeHandler(UbloxMessageHandler *handler) {
-
-	auto it = handlers.begin();
-
-	while(it != handlers.end()) {
-		if (*it == handler) {
-			it = handlers.erase(it);
-		}
-		else {
-			it++;
-		}
-	}
-}
-
-void UbloxCommandBase::callHandlers() {
-	for(auto it = handlers.begin(); it != handlers.end(); ) {
-		auto handler = *it;
-		bool increment = true;
-
-		if (handler->classFilter == 0xff || handler->classFilter == getMsgClass()) {
-			if (handler->idFilter == 0xff || handler->idFilter == getMsgId()) {
-				handler->handler(this);
-				if (handler->removeAndDelete) {
-					it = handlers.erase(it);
-					delete handler;
-					increment = false;
-				}
-			}
-		}
-		if (increment) {
-			it++;
-		}
 	}
 }
 
@@ -301,11 +268,13 @@ void UbloxCommandBase::discardToNextSync1() {
 }
 
 UbloxCommandBase *UbloxCommandBase::clone() {
-	UbloxCommandBase *copy = new UbloxCommandBase(payloadLen);
+	UbloxCommandBase *copy = new UbloxCommandBase(bufferSize);
 	if (copy) {
 		if (copy->buffer) {
-			memcpy(copy->buffer, buffer, payloadLen);
+			memcpy(copy->buffer, buffer, bufferSize);
 			copy->bufferOffset = bufferOffset;
+			copy->payloadLen = payloadLen;
+			copy->state = state;
 			return copy;
 		}
 		else {
@@ -336,11 +305,152 @@ void Ublox::setup() {
 }
 
 void Ublox::loop() {
-	
+	callHandlers();	
 }
 
 
-void Ublox::getValue(uint8_t msgClass, uint8_t msgId, std::function<void(UbloxCommandBase *)> callback) {
+void Ublox::addHandler(UbloxMessageHandler *handler) {
+	handlers.push_back(handler);
+}
+
+void Ublox::removeHandler(UbloxMessageHandler *handler) {
+
+	auto it = handlers.begin();
+
+	while(it != handlers.end()) {
+		if (*it == handler) {
+			it = handlers.erase(it);
+		}
+		else {
+			it++;
+		}
+	}
+}
+
+bool Ublox::hasHandler(UbloxCommandBase *cmd) {
+	for(auto it = handlers.begin(); it != handlers.end(); ) {
+		auto handler = *it;
+		bool increment = true;
+
+		if (handler->classFilter == 0xff || handler->classFilter == cmd->getMsgClass()) {
+			if (handler->idFilter == 0xff || handler->idFilter == cmd->getMsgId()) {
+				return true;
+			}
+		}
+		if (increment) {
+			it++;
+		}
+	}
+	return false;
+}
+
+
+void Ublox::callHandlers() {
+	while(!commandsToHandle.empty()) {
+		UbloxCommandBase *cmd = commandsToHandle.front();
+		commandsToHandle.pop_front();
+
+		for(auto it = handlers.begin(); it != handlers.end(); ) {
+			auto handler = *it;
+			bool increment = true;
+
+			if (handler->classFilter == CLASS_UBX_ACK) { // 0x05
+				// Handle CFG ACK/NACK
+				if (handler->origClassId == cmd->getMsgClass() &&
+					handler->origMsgId == cmd->getMsgId()) {
+					// Matches original request
+					UbloxMessageHandler::Reason reason = UbloxMessageHandler::Reason::NACK;
+
+					if (cmd->getMsgId() == MSG_UBX_ACK_ACK) {
+						reason = UbloxMessageHandler::Reason::ACK;
+					}
+					Log.info("%s origClass=0x%02x origMsgId=0x%02x", 
+						((reason == UbloxMessageHandler::Reason::ACK) ? "ACK" : "NACK"), 
+						handler->origMsgId, handler->origMsgId);
+
+					handler->handler(cmd, reason);
+					if (handler->removeAndDelete) {
+						it = handlers.erase(it);
+						delete handler;
+						increment = false;
+					}
+				}
+			}
+			else {
+				// Handle regular responses and data
+				if (handler->classFilter == 0xff || handler->classFilter == cmd->getMsgClass()) {
+					if (handler->idFilter == 0xff || handler->idFilter == cmd->getMsgId()) {						
+						Log.info("calling handler class=0x%02x id=0x%02x", cmd->getMsgClass(), cmd->getMsgId());
+						handler->handler(cmd, UbloxMessageHandler::Reason::DATA);
+						if (handler->removeAndDelete) {
+							it = handlers.erase(it);
+							delete handler;
+							increment = false;
+						}
+					}
+				}
+			}
+			if (increment) {
+				it++;
+			}
+		}
+
+		delete cmd;
+	}
+
+	// Handle timeouts
+	for(auto it = handlers.begin(); it != handlers.end(); ) {
+		auto handler = *it;
+		bool increment = true;
+
+		if (handler->timeout !=0 && System.millis() > handler->timeout) {
+			// Timeout occurred
+			if (handler->classFilter != CLASS_UBX_ACK) {
+				Log.info("timeout classFilter=0x%02x idFilter=0x%02x", handler->classFilter, handler->idFilter);
+			}
+			else {
+				Log.info("timeout ACK origClass=0x%02x origMsgId=0x%02x", handler->origMsgId, handler->origMsgId);
+			}
+			handler->handler(NULL, UbloxMessageHandler::Reason::TIMEOUT);
+			if (handler->removeAndDelete) {
+				it = handlers.erase(it);
+				delete handler;
+				increment = false;
+			}
+		}
+
+		if (increment) {
+			it++;
+		}
+	}
+
+}
+
+void Ublox::addCommandToHandle(UbloxCommandBase *cmd) {
+	commandsToHandle.push_back(cmd);
+}
+	
+
+
+void Ublox::configCommand(UbloxCommandBase *cmd, UbloxCommandCallback callback, unsigned long timeout) {
+	if (callback != NULL) {
+		UbloxMessageHandler *handler = new UbloxMessageHandler();
+
+		handler->classFilter = CLASS_UBX_ACK;
+		handler->idFilter = MSG_UBX_ANY;
+		handler->removeAndDelete = true;
+		handler->handler = callback;
+		handler->origClassId = cmd->getMsgClass();
+		handler->origMsgId = cmd->getMsgId();
+		handler->timeout = System.millis() + timeout;
+
+		addHandler(handler);
+	}
+
+	sendCommand(cmd);
+}
+
+void Ublox::getValue(uint8_t msgClass, uint8_t msgId, UbloxCommandCallback callback, unsigned long timeout) {
 
 	// This is not currently used and not well tested yet, beware!
 
@@ -348,10 +458,9 @@ void Ublox::getValue(uint8_t msgClass, uint8_t msgId, std::function<void(UbloxCo
 
 	handler->classFilter = msgClass;
 	handler->idFilter = msgId;
-	handler->handler = [this,handler,callback](UbloxCommandBase *cmd) {
-		callback(cmd);
-		handler->removeAndDelete = true;
-	};
+	handler->removeAndDelete = true;
+	handler->handler = callback;
+	handler->timeout = System.millis() + timeout;
 
 	addHandler(handler);
 
@@ -418,7 +527,12 @@ void Ublox::enableAckAiding() {
 
 void Ublox::enableExtIntBackup(bool enable) {
 
-	getValue(0x06, 0x3B, [this, enable](UbloxCommandBase *cmd) {
+	getValue(0x06, 0x3B, [this, enable](UbloxCommandBase *cmd, UbloxMessageHandler::Reason reason) {
+		if (reason != UbloxMessageHandler::Reason::DATA) {
+			// Did not get get (most likely a timeout)
+			return;
+		}
+
 		// Clear: 
 		//	extintSel (0x10) - use EXTINT0
 		//	extintWake (0x20) - disable
@@ -439,7 +553,12 @@ void Ublox::enableExtIntBackup(bool enable) {
 
 void Ublox::disableTimePulse() {
 	// CFG-TP5
-	getValue(0x06, 0x31, [this](UbloxCommandBase *cmd) {
+	getValue(0x06, 0x31, [this](UbloxCommandBase *cmd, UbloxMessageHandler::Reason reason) {
+		if (reason != UbloxMessageHandler::Reason::DATA) {
+			// Did not get get (most likely a timeout)
+			return;
+		}
+
 		uint32_t flags = cmd->getU4(28);
 
 		flags &= ~0x0001;
@@ -448,11 +567,13 @@ void Ublox::disableTimePulse() {
 
 		sendCommand(cmd);
 
+		/*
 		updateMON_HW([](UbloxCommandBase *cmd) {
 			// Set VP entry 0x0b (TIMEPULSE) to PIO (0xff)
 			cmd->setU1(28 + 0x0b, 0xff);
 			return true;
 		});
+		*/
 	});
 }
 
@@ -484,8 +605,12 @@ void Ublox::setPIO(uint32_t andMaskSel, uint32_t orMaskSel, uint32_t andMaskDir,
 
 void Ublox::updateMON_HW(std::function<bool(UbloxCommandBase *cmd)> updateFn) {
 	// MON-HW
-	getValue(0x0a, 0x09, [this, updateFn](UbloxCommandBase *cmd) {
-		
+	getValue(0x0a, 0x09, [this, updateFn](UbloxCommandBase *cmd, UbloxMessageHandler::Reason reason) {
+		if (reason != UbloxMessageHandler::Reason::DATA) {
+			// Did not get get (most likely a timeout)
+			return;
+		}
+
 		if (updateFn(cmd)) {
 			// updateFn returned true, so send the modified command
 			sendCommand(cmd);
