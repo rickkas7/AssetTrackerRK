@@ -196,6 +196,9 @@ void AssetTrackerBase::startThreadedMode() {
 void AssetTrackerBase::threadFunction() {
 	while(true) {
 		updateGPS();
+		if (threadCallback) {
+			threadCallback();
+		}
 		os_thread_yield();
 	}
 }
@@ -362,22 +365,37 @@ void AssetTrackerFeather6::setup() {
 
 	Ublox::setup();
 
-	waitFor(Serial.isConnected, 10000);
+	// Since we use threaded mode, also call Ublox::loop() from the thread so blocking
+	// instructions from loop won't get stuck forever.
+	setThreadCallback([this]() {
+		Ublox::loop();
+	});
 
-	Ublox::disableTimePulse();
-
-	Ublox::setPIO(~0, 0x0800, ~0, 0x0800, ~0, 0x800);
-
+	// D6 is connected to EXTINT on the u-blox GNSS
+	// It's set up so if LOW, the GNSS goes into BACKUP mode where it stops scanning and
+	// enters low-power mode but keeps the almanac and ephemeris data. This allows for
+	// fast wake from sleep (typically under 5 seconds).
 	pinMode(D6, OUTPUT);
 	digitalWrite(D6, HIGH);
-	// Ublox::enableExtIntBackup();
-
 
 
 }
 
 void AssetTrackerFeather6::loop() {
-	Ublox::loop();
 }
 
+bool AssetTrackerFeather6::gnssSleep() {
+
+	Ublox::enableExtIntBackupSync(true);
+
+	digitalWrite(D6, LOW);
+
+	return true;
+}
+
+bool AssetTrackerFeather6::gnssWake() {
+	digitalWrite(D6, HIGH);
+
+	return true;
+}
 

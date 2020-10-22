@@ -124,6 +124,11 @@ public:
 	void setExternalDecoder(std::function<bool(char)> fn) { externalDecoder = fn; };
 
 	/**
+	 * @brief Set a function to be called during the threaded mode loop
+	 */
+	void setThreadCallback(std::function<void(void)> fn) { threadCallback = fn; };
+
+	/**
 	 * @brief Override the default serial port used to connect to the GPS. Default is Serial1.
 	 */
 	AssetTrackerBase &withSerialPort(USARTSerial &port);
@@ -176,6 +181,7 @@ protected:
 	USARTSerial &serialPort = Serial1;
 	Thread *thread = NULL;
 	std::function<bool(char)> externalDecoder = 0;
+	std::function<void()> threadCallback = 0;
 	pin_t extIntPin = PIN_INVALID;
 	os_mutex_t mutex = 0;
 	static AssetTrackerBase *instance;
@@ -286,6 +292,25 @@ public:
 	void setup();
 
 	void loop();
+
+	/**
+	 * @brief Put the GNSS into sleep mode ("BACKUP" mode)
+	 * 
+	 * This stops scanning but keeps the almanac and ephemeris data, so wake from sleep is fast
+	 * (typically under 5 seconds).
+	 * 
+	 * This assumes the MCU D6 line is connected to the u-blox GNSS EXTINT pin as it's not
+	 * possible to wake from backup mode by I2C only.
+	 */
+	bool gnssSleep();
+
+	/**
+	 * @brief Wake the GNSS from sleep mode
+	 * 
+	 * If you go through setup() the GNSS will automatically be wakened if it was previously
+	 * asleep and you reset the device while it was asleep.
+	 */
+	bool gnssWake();
 
 protected:
 	LIS3DHI2C accel;
