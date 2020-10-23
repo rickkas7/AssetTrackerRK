@@ -126,7 +126,12 @@ public:
 	/**
 	 * @brief Set a function to be called during the threaded mode loop
 	 */
-	void setThreadCallback(std::function<void(void)> fn) { threadCallback = fn; };
+	void setThreadCallback(std::function<void(void)> fn) { threadCallbacks.push_back(fn); };
+
+	/**
+	 * @brief Set a function to be called during the when a full sentence is received
+	 */
+	void setSentenceCallback(std::function<void(void)> fn) { sentenceCallbacks.push_back(fn); };
 
 	/**
 	 * @brief Override the default serial port used to connect to the GPS. Default is Serial1.
@@ -181,7 +186,8 @@ protected:
 	USARTSerial &serialPort = Serial1;
 	Thread *thread = NULL;
 	std::function<bool(char)> externalDecoder = 0;
-	std::function<void()> threadCallback = 0;
+	std::vector<std::function<void()>> threadCallbacks;
+	std::vector<std::function<void()>> sentenceCallbacks;
 	pin_t extIntPin = PIN_INVALID;
 	os_mutex_t mutex = 0;
 	static AssetTrackerBase *instance;
@@ -198,6 +204,8 @@ public:
 
 protected:
 };
+
+
 
 /**
  * @brief Compatible replacement for the official Particle Electron AssetTracker library.
@@ -279,12 +287,44 @@ private:
 };
 
 /**
+ * @brief
+ */
+class AssetTrackerLED {
+public:
+	enum class BlinkState {
+		OFF,
+		SLOW,
+		FAST,
+		ON
+	};
+
+	AssetTrackerLED();
+	virtual ~AssetTrackerLED();
+
+	void setup(pin_t pin, AssetTrackerBase *base);
+
+	void sleep();
+	void wake();
+
+	static const unsigned long SLOW_PERIOD = 500;
+	static const unsigned long FAST_PERIOD = 100;
+
+protected:
+	pin_t pin; 
+	AssetTrackerBase *base;
+	BlinkState blinkState = BlinkState::OFF;
+	bool ledState = false;
+	unsigned long lastTime = 0;
+};
+
+#if PLATFORM_ID == PLATFORM_BORON
+/**
  * @brief Class for the FeatherGPS6 board
  * 
  * - LIS3DH (I2C) (interrupt to MCU: D8)
  * - u-blox GNSS (I2C) (interrupt from MCU: D6)
  */
-class AssetTrackerFeather6 : public AssetTrackerLIS3DH, public AssetTrackerBase, public Ublox {
+class AssetTrackerFeather6 : public AssetTrackerLED, public AssetTrackerLIS3DH, public AssetTrackerBase, public Ublox {
 public:
 	AssetTrackerFeather6();
 	virtual ~AssetTrackerFeather6();
@@ -316,7 +356,7 @@ protected:
 	LIS3DHI2C accel;
 
 };
-
+#endif // PLATFORM_ID == PLATFORM_BORON
 
 
 

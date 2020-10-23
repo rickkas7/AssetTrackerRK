@@ -115,10 +115,12 @@ void AssetTrackerBase::begin() {
 
 
 void AssetTrackerBase::updateGPS(void) {
+	bool hasSentence = false;
+
 	if (!useWire) {
 		while (serialPort.available() > 0) {
 			char c = (char)serialPort.read();
-			gps.encode(c);
+			hasSentence |= gps.encode(c);
 			if (externalDecoder) {
 				externalDecoder(c);
 			}
@@ -135,7 +137,7 @@ void AssetTrackerBase::updateGPS(void) {
 			if (available > 0) {
 				if (wireReadBytes(buf, available) == available) {
 					for(uint16_t ii = 0; ii < available; ii++) {
-						gps.encode(buf[ii]);
+						hasSentence |= gps.encode(buf[ii]);
 						if (externalDecoder) {
 							externalDecoder(buf[ii]);
 						}
@@ -144,6 +146,11 @@ void AssetTrackerBase::updateGPS(void) {
 					// Log.dump(buf, available);
 				}
 			}
+		}
+	}
+	if (hasSentence) {
+		for(auto it = sentenceCallbacks.begin(); it != sentenceCallbacks.end(); it++) {
+			(*it)();
 		}
 	}
 }
@@ -196,8 +203,9 @@ void AssetTrackerBase::startThreadedMode() {
 void AssetTrackerBase::threadFunction() {
 	while(true) {
 		updateGPS();
-		if (threadCallback) {
-			threadCallback();
+
+		for(auto it = threadCallbacks.begin(); it != threadCallbacks.end(); it++) {
+			(*it)();
 		}
 		os_thread_yield();
 	}
@@ -342,6 +350,86 @@ LIS3DHSPI *AssetTracker::getLIS3DHSPI() {
 	return &accel;
 }
 
+
+//
+//
+//
+AssetTrackerLED::AssetTrackerLED() {
+
+}
+AssetTrackerLED::~AssetTrackerLED() {
+}
+
+void AssetTrackerLED::setup(pin_t pin_, AssetTrackerBase *base_) {
+	pin = pin_;
+	base = base_;
+	
+	pinMode(pin, OUTPUT);
+	digitalWrite(pin, LOW);
+
+	base->setSentenceCallback([this]() {
+		if (base->gpsFix()) {
+			blinkState = BlinkState::ON;
+		}
+		else {
+			if (base->getSatellites() > 3) {
+				blinkState = BlinkState::FAST;
+			}
+			else {
+				blinkState = BlinkState::SLOW;
+			}
+
+		}
+	});
+
+	base->setThreadCallback([this]() {
+		switch(blinkState) {
+		case BlinkState::OFF:
+			if (ledState) {
+				digitalWrite(pin, LOW);
+				ledState = false;
+			}
+			break;
+
+		case BlinkState::SLOW:
+			if (millis() - lastTime >= SLOW_PERIOD) {
+				lastTime = millis();
+
+				ledState = !ledState;
+				digitalWrite(pin, ledState);
+			}
+			break;
+
+		case BlinkState::FAST:
+			if (millis() - lastTime >= FAST_PERIOD) {
+				lastTime = millis();
+
+				ledState = !ledState;
+				digitalWrite(pin, ledState);
+			}
+			break;
+
+		case BlinkState::ON:
+
+			if (!ledState) {
+				digitalWrite(pin, HIGH);
+				ledState = true;
+			}
+			break;
+		}
+	});
+}
+
+void AssetTrackerLED::sleep() {
+	blinkState = BlinkState::OFF;
+	digitalWrite(pin, LOW);
+}
+
+void AssetTrackerLED::wake() {
+}
+
+
+#if PLATFORM_ID == PLATFORM_BORON
 //
 //
 //
@@ -377,6 +465,9 @@ void AssetTrackerFeather6::setup() {
 	// fast wake from sleep (typically under 5 seconds).
 	pinMode(D6, OUTPUT);
 	digitalWrite(D6, HIGH);
+
+	// A5 is used as the GNSS lock LED
+	AssetTrackerLED::setup(A5, this);	
 }
 
 void AssetTrackerFeather6::loop() {
@@ -385,6 +476,7 @@ void AssetTrackerFeather6::loop() {
 bool AssetTrackerFeather6::gnssSleep() {
 
 	Ublox::enableExtIntBackupSync(true);
+	AssetTrackerLED::sleep();
 
 	digitalWrite(D6, LOW);
 
@@ -392,8 +484,11 @@ bool AssetTrackerFeather6::gnssSleep() {
 }
 
 bool AssetTrackerFeather6::gnssWake() {
+
 	digitalWrite(D6, HIGH);
+	AssetTrackerLED::wake();
 
 	return true;
 }
 
+#endif // PLATFORM_ID == PLATFORM_BORON

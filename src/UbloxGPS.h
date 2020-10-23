@@ -449,8 +449,6 @@ public:
 	static const uint8_t CLASS_UBX_ANY = 0xff;
 	static const uint8_t MSG_UBX_ANY = 0xff;
 
-	static const uint8_t PIO_TIMEPULSE = 11; 			// 0x0b, mask 0x0800
-
 protected:
 	/**
 	 * @brief u-blox parsing state constants
@@ -577,26 +575,6 @@ public:
 protected:
 	os_mutex_t mutex;
 	UbloxMessageHandler::Reason reason;
-};
-
-class UbloxPio {
-public:
-	UbloxPio();
-	virtual ~UbloxPio();
-
-	UbloxPio &withMask(uint32_t andMaskSel, uint32_t orMaskSel, uint32_t andMaskDir, uint32_t orMaskDir, uint32_t andMaskVal, uint32_t orMaskVal);
-
-	UbloxPio &withOutputValue(uint8_t pioNum, bool value);
-
-	void update(UbloxCommandBase *cmd) const;
-
-	
-	uint32_t andMaskSel = ~0;
-	uint32_t orMaskSel = 0; 
-	uint32_t andMaskDir = ~0;
-	uint32_t orMaskDir = 0;
-	uint32_t andMaskVal = ~0;
-	uint32_t orMaskVal = 0;
 };
 
 /**
@@ -756,21 +734,6 @@ public:
 
 
 	bool enableExtIntBackupSync(bool enable, unsigned long timeout = 5000);
-
-	void setPIO(UbloxPio &pioMode, UbloxCommandCallback callback, unsigned long timeout = 5000);
-
-	void updateMON_HW(UbloxCommandCallback callback, unsigned long timeout = 5000);
-
-	/**
-	 * @brief Disables the timepulse - do not use, not functional yet
-	 * 
-	 * The UbloxCommandCallback has the following prototype. It's a std::function so you can pass a lambda if desired.
-	 * 
-	 * 	void callbackFn(UbloxCommandBase *, UbloxMessageHandler::Reason reason)
-	 */
-	void enableTimePulse(bool enable, UbloxCommandCallback callback, unsigned long timeout = 5000);
-
-	bool enableTimePulseSync(bool enable, unsigned long timeout = 5000);
 
 	/**
 	 * @brief Constants for whether to do a hot, warm, or cold restart using resetReceiver

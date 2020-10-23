@@ -129,4 +129,8 @@ options for controlling it will be added later.
 
 - Update to LIS3DH 0.2.8 to fix compiler error for undefined conversion to SpiClass with 1.5.1-rc.1. The fix in 0.2.7 didn't work right with SPI1.
 
+### Update for 0.4.0 (2020-10-23)
 
+- Refactor code to allow mix-and-match of features
+- Bug fixes in the u-blox direct API
+- Support for [FeatherGPS6](https://github.com/rickkas7/FeatherGPS6) hardware
