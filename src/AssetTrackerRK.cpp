@@ -377,8 +377,6 @@ void AssetTrackerFeather6::setup() {
 	// fast wake from sleep (typically under 5 seconds).
 	pinMode(D6, OUTPUT);
 	digitalWrite(D6, HIGH);
-
-
 }
 
 void AssetTrackerFeather6::loop() {

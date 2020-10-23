@@ -193,6 +193,7 @@ bool UbloxCommandBase::setData(size_t offset, const void *data, size_t dataLen) 
 		return true;
 	}
 	else {
+		Log.info("setData failed, out of bounds offset=%u dataLen=%u maxSize=%u", offset, dataLen, bufferSize - HEADER_PLUS_CRC_LEN);
 		return false;
 	}
 }
@@ -317,6 +318,66 @@ UbloxMessageHandler::Reason UbloxSyncCommand::blockUntilCompletion() {
 //
 //
 
+
+UbloxPio::UbloxPio() {
+}
+UbloxPio::~UbloxPio() {
+}
+
+void UbloxPio::update(UbloxCommandBase *cmd) const {
+	uint32_t value = cmd->getU4(0); // pinSel
+	value &= andMaskSel;
+	value |= orMaskSel;
+	Log.info("pinSel=%08lx", value);
+	cmd->setU4(0, value);
+	
+	value = cmd->getU4(8); // pinDir
+	value &= andMaskDir;
+	value |= orMaskDir;
+	Log.info("pinDir=%08lx", value);
+	cmd->setU4(8, value);
+
+	value = cmd->getU4(12); // pinVal
+	value &= andMaskVal;
+	value |= orMaskVal;
+	Log.info("pinVal=%08lx", value);
+	cmd->setU4(12, value);
+}
+
+UbloxPio &UbloxPio::withMask(uint32_t andMaskSel, uint32_t orMaskSel, uint32_t andMaskDir, uint32_t orMaskDir, uint32_t andMaskVal, uint32_t orMaskVal) {
+	this->andMaskSel = andMaskSel;
+	this->orMaskSel = orMaskSel;
+	this->andMaskDir = andMaskDir;
+	this->orMaskDir = orMaskDir;
+	this->andMaskVal = andMaskVal;
+	this->orMaskVal = orMaskVal;
+	return *this;
+}
+
+UbloxPio &UbloxPio::withOutputValue(uint8_t pioNum, bool value) {
+	uint16_t mask = 1 << pioNum;
+
+	this->andMaskSel = ~0;
+	this->orMaskSel = mask;
+	this->andMaskDir = ~0;
+	this->orMaskDir = mask;
+
+	if (value) {
+		this->andMaskVal = ~0;
+		this->orMaskVal = mask;
+	}
+	else {
+		this->andMaskVal = ~mask;
+		this->orMaskVal = 0;
+	}
+
+	return *this;
+}
+
+//
+//
+//
+
 Ublox *Ublox::instance = 0;
 
 
@@ -339,6 +400,7 @@ void Ublox::loop() {
 
 
 void Ublox::addHandler(UbloxMessageHandler *handler) {
+	// TODO: Probably add a mutex here
 	handlersToAdd.push_back(handler);
 }
 
@@ -443,7 +505,8 @@ void Ublox::callHandlers() {
 		delete cmd;
 	}
 
-	// If handlers were added, add them into the real list now
+	// If handlers were added, add them into the real list now. We don't do it above because it
+	// can corrupt the handlers list
 	while(!handlersToAdd.empty()) {
 		UbloxMessageHandler *handler = handlersToAdd.back();
 		handlersToAdd.pop_back();
@@ -522,7 +585,7 @@ void Ublox::configGetSetValue(uint8_t msgClass, uint8_t msgId, UbloxCommandCallb
 	Log.info("configGetSetValue class=%02x id=%02x", msgClass, msgId);
 
 	getValue(msgClass, msgId, [this,callback,timeout](UbloxCommandBase *cmd, UbloxMessageHandler::Reason reason) {
-		Log.info("configGetSetValue callback getValue reason=%d", reason);
+		Log.info("configGetSetValue callback getValue reason=%d", (int) reason);
 		if (reason != UbloxMessageHandler::Reason::DATA) {
 			// Did not get get (most likely a timeout)
 			callback(cmd, reason);
@@ -625,7 +688,7 @@ void Ublox::enableAckAiding() {
 void Ublox::enableExtIntBackup(bool enable, UbloxCommandCallback callback, unsigned long timeout) {
 
 	configGetSetValue(0x06, 0x3B, [this, callback, enable](UbloxCommandBase *cmd, UbloxMessageHandler::Reason reason) {
-		Log.info("enableExtIntBackup reason=%d", reason);
+		Log.info("enableExtIntBackup reason=%d", (int) reason);
 
 		if (reason == UbloxMessageHandler::Reason::UPDATE) {
 			Log.info("enableExtIntBackup UPDATE enable=%d", enable);
@@ -651,93 +714,124 @@ bool Ublox::enableExtIntBackupSync(bool enable, unsigned long timeout) {
 	enableExtIntBackup(enable, [&syncCommand](UbloxCommandBase *, UbloxMessageHandler::Reason reason) {
 		Log.info("enableExtIntBackupSync callback called");
 
+		// Completion of config setting results in ACK, but transform to COMPLETE here
+		// for consistency with other non-config calls.
+		if (reason == UbloxMessageHandler::Reason::ACK) {
+			reason = UbloxMessageHandler::Reason::COMPLETE;
+		}
+
 		syncCommand.completion(reason);
 	}, timeout);
 
 	UbloxMessageHandler::Reason reason = syncCommand.blockUntilCompletion();
 
-	Log.info("enableExtIntBackupSync unblocked reason=%d", reason);
+	Log.info("enableExtIntBackupSync unblocked reason=%d", (int) reason);
 
-	return (reason == UbloxMessageHandler::Reason::ACK);
-
+	return (reason == UbloxMessageHandler::Reason::COMPLETE);
 }
 
 
 // DO NOT USE THIS
 // It doesn't really work correctly
-void Ublox::disableTimePulse(UbloxCommandCallback callback) {
+void Ublox::enableTimePulse(bool enable, UbloxCommandCallback callback, unsigned long timeout) {
 	// CFG-TP5
-	getValue(0x06, 0x31, [this,callback](UbloxCommandBase *cmd, UbloxMessageHandler::Reason reason) {
-		if (reason != UbloxMessageHandler::Reason::DATA) {
-			// Did not get get (most likely a timeout)
-			if (callback) {
-				callback(cmd, reason);
-			}
+	configGetSetValue(0x06, 0x31, [enable,this,callback](UbloxCommandBase *cmd, UbloxMessageHandler::Reason reason) {
+		Log.info("enableTimePulse getSetValue reason=%d", (int) reason);
+
+		if (reason == UbloxMessageHandler::Reason::UPDATE) {
+			uint32_t flags = cmd->getU4(28);
+
+			// TODO: Handle enable case here!
+
+			flags &= ~0x0001;
+
+			cmd->setU4(28, flags);
+
 			return;
 		}
 
-		uint32_t flags = cmd->getU4(28);
+		if (reason != UbloxMessageHandler::Reason::ACK) {
+			Log.info("enableTimePulse disable cfg failed %d", (int)reason);
+			callback(cmd, reason);
+			return;
+		}
 
-		flags &= ~0x0001;
+		Log.info("enableTimePulse about to update mon-hw");
 
-		cmd->setU4(28, flags);
+		updateMON_HW([this,callback](UbloxCommandBase *cmd, UbloxMessageHandler::Reason reason) {
+			if (reason == UbloxMessageHandler::Reason::UPDATE) {
+				// Set VP entry 0x0b (TIMEPULSE) to PIO (0xff)
+				cmd->setU1(28 + UbloxCommandBase::PIO_TIMEPULSE, 0xff);
 
+				Log.info("before set");
+				Log.dump(cmd->getData(), 60);
+
+				// Set PIO to PIO11 (0x0800) to sel, output, low
+				UbloxPio pio;
+				pio.withOutputValue(UbloxCommandBase::PIO_TIMEPULSE, false);
+				pio.update(cmd);
+
+				Log.info("after set");
+				Log.dump(cmd->getData(), 60);
+				return;
+			}
+
+			callback(cmd, reason);
+		});
+
+	}, timeout);
+}
+
+bool Ublox::enableTimePulseSync(bool enable, unsigned long timeout) {
+	UbloxSyncCommand syncCommand;
+
+	Log.info("enableTimePulseSync");
+
+	enableTimePulse(enable, [&syncCommand](UbloxCommandBase *, UbloxMessageHandler::Reason reason) {
+		Log.info("enableTimePulseSync callback called");
+
+		syncCommand.completion(reason);
+	}, timeout);
+
+	UbloxMessageHandler::Reason reason = syncCommand.blockUntilCompletion();
+
+	Log.info("enableTimePulseSync unblocked reason=%d", (int) reason);
+
+	return (reason == UbloxMessageHandler::Reason::COMPLETE);
+}
+
+
+
+void Ublox::setPIO(UbloxPio &pioMode, UbloxCommandCallback callback, unsigned long timeout) {
+
+	updateMON_HW([this, callback, pioMode](UbloxCommandBase *cmd, UbloxMessageHandler::Reason reason) {
+		if (reason == UbloxMessageHandler::Reason::UPDATE) {
+			pioMode.update(cmd);
+			return;
+		}
+
+		callback(cmd,reason);
+	}, timeout);
+
+}
+
+void Ublox::updateMON_HW(UbloxCommandCallback callback, unsigned long timeout) {
+	// MON-HW
+	getValue(0x0a, 0x09, [this, callback](UbloxCommandBase *cmd, UbloxMessageHandler::Reason reason) {
+		if (reason != UbloxMessageHandler::Reason::DATA) {
+			// Did not get get (most likely a timeout)
+			callback(cmd, reason);
+			return;
+		}
+
+		callback(cmd, UbloxMessageHandler::Reason::UPDATE);
+
+		// Update the data. This is synchronous and fast.
 		sendCommand(cmd);
 
-		if (callback) {
-			callback(NULL, UbloxMessageHandler::Reason::COMPLETE);
-		}
-		updateMON_HW([](UbloxCommandBase *cmd) {
-			// Set VP entry 0x0b (TIMEPULSE) to PIO (0xff)
-			// cmd->setU1(28 + 0x0b, 0xff);
-
-			// Might also want to set the PIO mode here
-			// Ublox::setPIO(~0, 0x0800, ~0, 0x0800, ~0, 0x800);
-
-			return true;
-		});
-	});
-}
-
-void Ublox::setPIO(uint32_t andMaskSel, uint32_t orMaskSel, uint32_t andMaskDir, uint32_t orMaskDir, uint32_t andMaskVal, uint32_t orMaskVal) {
-
-	updateMON_HW([andMaskSel, orMaskSel, andMaskDir, orMaskDir, andMaskVal, orMaskVal](UbloxCommandBase *cmd) {
-		uint32_t value = cmd->getU4(0); // pinSel
-		value &= andMaskSel;
-		value |= orMaskSel;
-		Log.info("pinSel=%08lx", value);
-		cmd->setU4(0, value);
-		
-		value = cmd->getU4(8); // pinDir
-		value &= andMaskDir;
-		value |= orMaskDir;
-		Log.info("pinDir=%08lx", value);
-		cmd->setU4(8, value);
-
-		value = cmd->getU4(12); // pinVal
-		value &= andMaskVal;
-		value |= orMaskVal;
-		Log.info("pinVal=%08lx", value);
-		cmd->setU4(12, value);
-
-		return true; 
-	});
-
-}
-
-void Ublox::updateMON_HW(std::function<bool(UbloxCommandBase *cmd)> updateFn) {
-	// MON-HW
-	getValue(0x0a, 0x09, [this, updateFn](UbloxCommandBase *cmd, UbloxMessageHandler::Reason reason) {
-		if (reason != UbloxMessageHandler::Reason::DATA) {
-			// Did not get get (most likely a timeout)
-			return;
-		}
-
-		if (updateFn(cmd)) {
-			// updateFn returned true, so send the modified command
-			sendCommand(cmd);
-		}
-	});
+		// There is no ACK or callback for updating MON_HW
+		callback(cmd, UbloxMessageHandler::Reason::COMPLETE);
+	}, timeout);
 
 }
 
