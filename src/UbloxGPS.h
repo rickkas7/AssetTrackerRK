@@ -3,36 +3,13 @@
 
 #include "Particle.h"
 
-#include "AssetTrackerRK.h"
 #include "google-maps-device-locator.h" // Only used if UbloxAssistNow is used
 
+#include <deque>
 #include <vector>
 
-class UbloxCommandBase; // Foreward declaration
+//class UbloxCommandBase; // Foreward declaration
 
-/**
- * @brief Structure holding information about a message handler
- */
-typedef struct {
-	/**
-	 * @brief u-box message class (first of the two bytes)
-	 * 
-	 * 0xff = match anything.
-	 */
-	uint8_t classFilter;
-
-	/**
-	 * @brief u-blox message ID (second of the two bytes)
-	 * 
-	 * 0xff = match anything.
-	 */
-	uint8_t idFilter;
-
-	/**
-	 * @brief Function top call on match
-	 */
-	std::function<void(UbloxCommandBase *cmd)> handler;
-} UbloxMessageHandler;
 
 
 /**
@@ -57,6 +34,14 @@ public:
 	 * memory if the buffer is smaller than that.
 	 */
 	UbloxCommandBase(uint8_t *buffer, size_t bufferSize);
+
+	/**
+	 * @brief Construct a UbloxCommandBase object with a buffer allocated on the heap.
+	 *
+	 * @param bufferSize Size of the buffer, a minimum of HEADER_PLUS_CRC_LEN (8) bytes. You will overwrite
+	 * memory if the buffer is smaller than that.
+	 */
+	UbloxCommandBase(size_t bufferSize);
 
 	/**
 	 * @brief Destructor
@@ -92,34 +77,6 @@ public:
 	 * The updateChecksum() method is typically used to calculate it for sending.
 	 */
 	void calculateChecksum(uint8_t &ckA, uint8_t &ckB) const;
-
-	/**
-	 * @brief Add a message handler
-	 *
-	 * @param handler A pointer to a filled in UbloxMessageHandler structure.
-	 *
-	 * Note the handler object  must remain valid until removeHandler is called on it, so you probably want
-	 * to make it a global variable or allocated with new. The exception is if you have a blocking function
-	 * call and add and remove the handler within the scope of the function, then you can allocate the
-	 * object on the stack.
-	 */
-	void addHandler(UbloxMessageHandler *handler);
-
-	/**
-	 * @brief Remove a message handler
-	 * 
-	 * @param handler The handler to remove (same value you passed to addHandler)
-	 * 
-	 * Note this will not free handler as it can't know if it was allocated on the stack, as a 
-	 * class member, global variable, or new. If you allocated the object with new, don't forget
-	 * to delete it!
-	 */
-	void removeHandler(UbloxMessageHandler *handler);
-
-	/**
-	 * @brief Used internally to call all of the message handlers that match this class and id
-	 */
-	void callHandlers();
 
 	/**
 	 * @brief Gets the message class of the current command
@@ -473,7 +430,24 @@ public:
 	 */
 	size_t getSendLength() const { return HEADER_PLUS_CRC_LEN + payloadLen; };
 
-	
+	/**
+	 * @brief Set the deleteBuffer flag for this object
+	 */
+	UbloxCommandBase &withDeleteBuffer(bool value = true) { deleteBuffer = value; return *this; };
+
+	/**
+	 * @brief Make a modifyable clone of this object on the heap
+	 */
+	UbloxCommandBase *clone();
+
+	static const uint8_t CLASS_UBX_ACK = 0x05;			// 
+	static const uint8_t   MSG_UBX_ACK_ACK = 0x01;		// 
+	static const uint8_t   MSG_UBX_ACK_NACK = 0x00;		// 
+
+	static const uint8_t CLASS_UBX_CFG = 0x06;			// 
+
+	static const uint8_t CLASS_UBX_ANY = 0xff;
+	static const uint8_t MSG_UBX_ANY = 0xff;
 
 protected:
 	/**
@@ -498,8 +472,9 @@ protected:
 	size_t bufferOffset = 0;  						//!< Current offset being written to in buffer when using encode()
 	size_t payloadLen = 0;  						//!< Length of the data payload (0 = no data). This does not include the header or CRC.
 	State state = State::LOOKING_FOR_START;  		//!< Current parsing state
-	std::vector<UbloxMessageHandler*> handlers;  	//!< Vector of message handler objects, contains filter and callback function to handle incoming messages
+	bool deleteBuffer = false;						//!< Delete buffer in the destructor
 };
+
 
 /**
  * @brief Class to hold a command to send or a command to decode
@@ -522,6 +497,87 @@ private:
 };
 
 /**
+ * @brief Structure holding information about a message handler
+ */
+typedef struct {
+	enum class Reason : uint8_t {
+		UNKNOWN = 0,// 0
+		DATA,		// 1
+		TIMEOUT,	// 2 Note: cmd will be null
+		ACK,		// 3
+		NACK,		// 4
+		COMPLETE,	// 5 Note: cmd will be null
+		UPDATE		// 6
+	};
+
+	/**
+	 * @brief u-box message class (first of the two bytes)
+	 * 
+	 * 0xff = match anything.
+	 */
+	uint8_t classFilter;
+
+	/**
+	 * @brief u-blox message ID (second of the two bytes)
+	 * 
+	 * 0xff = match anything.
+	 */
+	uint8_t idFilter;
+
+	/**
+	 * @brief Function top call on match
+	 */
+	std::function<void(UbloxCommandBase *cmd, Reason reason)> handler;
+
+	/**
+	 * @brief Remove and delete this handler
+	 * 
+	 * If true, on returning from the handler, remove from the list of handlers and 
+	 * delete the UbloxMessageHandler object. This is only done after the handler
+	 * is called from callHandlers.
+	 */
+	bool removeAndDelete = false;
+
+	/**
+	 * @brief For CFG messages the original class ID for use in the ACK/NACK handler
+	 */
+	uint8_t origClassId = 0;
+
+	/**
+	 * @brief For CFG messages the original message ID for use in the ACK/NACK handler
+	 */
+	uint8_t origMsgId = 0;
+
+	/**
+	 * @brief Timeout time for ACK/NACK or response
+	 */
+	uint64_t timeout = 0;
+} UbloxMessageHandler;
+
+/**
+ * @brief Command handler
+ */
+typedef std::function<void(UbloxCommandBase *, UbloxMessageHandler::Reason reason)> UbloxCommandCallback;
+
+
+/**
+ * @brief
+ */
+class UbloxSyncCommand {
+public:
+	UbloxSyncCommand();
+	virtual ~UbloxSyncCommand();
+
+	void completion(UbloxMessageHandler::Reason reason);
+
+	UbloxMessageHandler::Reason blockUntilCompletion();
+
+protected:
+	os_mutex_t mutex;
+	UbloxMessageHandler::Reason reason;
+};
+
+/**
  * @brief Class for implementing u-blox GPS support
  * 
  * You typically instantiate one of these as a global variable in your main application code
@@ -530,7 +586,7 @@ private:
  * If you are using it, be sure to call the setup() and loop() methods from your application setup()
  * and loop()!
  */
-class Ublox : public UbloxCommand<100> {
+class Ublox  {
 public:
 	/**
 	 * @brief Constructor. You typically instantiate one of these as a global variable in your main
@@ -553,6 +609,61 @@ public:
 	 */
 	void loop();
 
+	/**
+	 * @brief Add a message handler
+	 *
+	 * @param handler A pointer to a filled in UbloxMessageHandler structure.
+	 *
+	 * Note the handler object  must remain valid until removeHandler is called on it, so you probably want
+	 * to make it a global variable or allocated with new. The exception is if you have a blocking function
+	 * call and add and remove the handler within the scope of the function, then you can allocate the
+	 * object on the stack.
+	 */
+	void addHandler(UbloxMessageHandler *handler);
+
+	/**
+	 * @brief Remove a message handler
+	 * 
+	 * @param handler The handler to remove (same value you passed to addHandler)
+	 * 
+	 * Note this will not free handler as it can't know if it was allocated on the stack, as a 
+	 * class member, global variable, or new. If you allocated the object with new, don't forget
+	 * to delete it!
+	 */
+	// void removeHandler(UbloxMessageHandler *handler);
+
+	/**
+	 * @brief Returns true if cmd has a registered command handler
+	 * 
+	 * This eliminates the need to clone if the message will just be discarded.
+	 */
+	bool hasHandler(UbloxCommandBase *cmd);
+
+	/**
+	 * @brief Used internally from loop to call all of the message handlers that match this class and id
+	 */
+	void callHandlers();
+
+	/**
+	 * @brief Add a command to be handled from loop
+	 * 
+	 * @param cmd The command object. It must be a copy, returned from clone().
+	 */
+	void addCommandToHandle(UbloxCommandBase *cmd);
+
+	/**
+	 * @brief Asynchronous config (CFG 0x06)
+	 */
+	void configCommand(UbloxCommandBase *cmd, UbloxCommandCallback callback, unsigned long timeout = 5000);
+
+	/**
+	 * @brief Synchronous version of configCommand (CFG 0x06)
+	 * 
+	 * @return true if ACK is returned, false if NAK or timeout occurs
+	 */
+	bool configCommandSync(UbloxCommandBase *cmd, unsigned long timeout = 5000);
+
+	void configGetSetValue(uint8_t msgClass, uint8_t msgId, UbloxCommandCallback callback, unsigned long timeout);
 
 	/**
 	 * @brief Get a command value from the u-blox modem
@@ -575,8 +686,11 @@ public:
 	 * Note that when the AssetTracker is running in threaded mode, this will be called from the GPS
 	 * reading thread so you should not do operations that block or are lengthy from the callback
 	 * as it will affect GPS performance. 
+	 * 
+	 * Also note that the "cmd" passed to the callback only remains valid until the callback returns
+	 * at which point the cmd object will be reused for the next response data.
 	 */
-	void getValue(uint8_t msgClass, uint8_t msgId, std::function<void(UbloxCommandBase *)> callback);
+	void getValue(uint8_t msgClass, uint8_t msgId, UbloxCommandCallback callback, unsigned long timeout = 5000);
 
 	/**
 	 * @brief Send a command top the GPS
@@ -585,8 +699,13 @@ public:
 	 * 
 	 * This class has some pre-made commands like setAntenna() but the sendCommand() can be used to
 	 * send any arbitrary command.
+	 * 
+	 * This will send the data synchronously but there is no guarantee the GNSS received it or
+	 * successfully processed it. "cmd" only needs to remain valid until the sendCommand method
+	 * returns.
 	 */
 	void sendCommand(UbloxCommandBase *cmd);
+
 
 	/**
 	 * @brief Sets the antenna to external or internal on the AssetTracker V2.
@@ -598,6 +717,23 @@ public:
 	 */
 	void enableAckAiding();
 
+	/**
+	 * @brief Enable EXTINT Backup mode
+	 * 
+	 * This is used to put the GNSS in sleep ("Backup") mode using the EXTINT pin. If enabled, 
+	 *   LOW = sleep/backup, HIGH = normal operation
+	 * The GNSS can still wake up for scheduled operations.
+	 * 
+	 * If the Force-OFF (extintBackup) feature in UBX-CFG-PM2 is enabled, the receiver will enter Inactive 
+	 * states for as long as the configured EXTINT pin is set to 'low' until the next wake up event. Any 
+	 * wake-up event can wake up the receiver even while the EXTINT pin is set to 'low' (see Wake up). 
+	 * However, if the pin stay at 'low' state, the receiver will only wake up for the time needed to 
+	 * read the configuration pin settings then it will enter the Inactive state again.
+	 */
+	void enableExtIntBackup(bool enable, UbloxCommandCallback callback, unsigned long timeout = 5000);
+
+
+	bool enableExtIntBackupSync(bool enable, unsigned long timeout = 5000);
 
 	/**
 	 * @brief Constants for whether to do a hot, warm, or cold restart using resetReceiver
@@ -639,6 +775,12 @@ public:
 	static Ublox *getInstance() { return instance; };
 
 protected:
+	UbloxCommand<100> incomingCommand;
+	
+	std::deque<UbloxCommandBase *> commandsToHandle; 
+	std::vector<UbloxMessageHandler*> handlers;  	//!< Vector of message handler objects, contains filter and callback function to handle incoming messages
+	std::vector<UbloxMessageHandler*> handlersToAdd; 
+
 	static Ublox *instance;	//!< Singleton instance of this class 
 };
 
