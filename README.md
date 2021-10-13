@@ -134,3 +134,7 @@ options for controlling it will be added later.
 - Refactor code to allow mix-and-match of features
 - Bug fixes in the u-blox direct API
 - Support for [FeatherGPS6](https://github.com/rickkas7/FeatherGPS6) hardware
+
+### 0.4.2 (2021-10-13)
+
+- Fixed compile error when building for Device OS 3.1 or later.

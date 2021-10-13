@@ -667,6 +667,7 @@ public:
 	    SINGLE_THREADED_BLOCK() {
 	    	return location;
 	    }
+	    return location;
 	}
 
 	/**
@@ -676,6 +677,7 @@ public:
 	    SINGLE_THREADED_BLOCK() {
 	    	return date;
 	    }
+    	return date;
 	}
 
 	/**
@@ -685,6 +687,7 @@ public:
 	    SINGLE_THREADED_BLOCK() {
 	    	return time;
 	    }
+	    return time;
 	}
 
 	/**
@@ -694,6 +697,7 @@ public:
 	    SINGLE_THREADED_BLOCK() {
 	    	return speed;
 	    }
+	    return speed;
 	}
 
 	/**
@@ -703,6 +707,7 @@ public:
 	    SINGLE_THREADED_BLOCK() {
 	    	return course;
 	    }
+	    return course;
 	}
 
 	/**
@@ -712,6 +717,7 @@ public:
 	    SINGLE_THREADED_BLOCK() {
 	    	return altitude;
 	    }
+	    return altitude;
 	}
 
 	/**
@@ -723,6 +729,7 @@ public:
 	    SINGLE_THREADED_BLOCK() {
 	    	return geoidSeparation;
 	    }
+	    return geoidSeparation;
 	}
 
 	/**
@@ -732,6 +739,7 @@ public:
 	    SINGLE_THREADED_BLOCK() {
 	    	return satellites;
 	    }
+	    return satellites;
 	}
 
 	/**
@@ -745,6 +753,7 @@ public:
 	    SINGLE_THREADED_BLOCK() {
 	    	return hdop;
 	    }
+	    return hdop;
 	}
 
 	/**
